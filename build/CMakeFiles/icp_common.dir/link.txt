@@ -1,0 +1,2 @@
+/usr/bin/ar qc libicp_common.a CMakeFiles/icp_common.dir/src/common/grid.cpp.o CMakeFiles/icp_common.dir/src/common/icp.cpp.o CMakeFiles/icp_common.dir/src/common/io.cpp.o CMakeFiles/icp_common.dir/src/common/kabsch.cpp.o CMakeFiles/icp_common.dir/src/common/metrics.cpp.o CMakeFiles/icp_common.dir/src/common/voxel.cpp.o
+/usr/bin/ranlib libicp_common.a

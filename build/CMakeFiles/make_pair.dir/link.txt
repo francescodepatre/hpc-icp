@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -march=native CMakeFiles/make_pair.dir/src/tools/make_pair.cpp.o -o make_pair  libicp_common.a 

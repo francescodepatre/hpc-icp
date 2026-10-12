@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -march=native CMakeFiles/icp_seq.dir/src/seq/main.cpp.o -o icp_seq  libicp_common.a 
