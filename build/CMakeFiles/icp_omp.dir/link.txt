@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -march=native CMakeFiles/icp_omp.dir/src/omp/icp_omp.cpp.o CMakeFiles/icp_omp.dir/src/omp/main.cpp.o -o icp_omp  libicp_common.a /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a 

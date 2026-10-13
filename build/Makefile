@@ -154,6 +154,19 @@ icp_seq/fast:
 .PHONY : icp_seq/fast
 
 #=============================================================================
+# Target rules for targets named icp_omp
+
+# Build rule for target.
+icp_omp: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 icp_omp
+.PHONY : icp_omp
+
+# fast build rule for target.
+icp_omp/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/build
+.PHONY : icp_omp/fast
+
+#=============================================================================
 # Target rules for targets named make_pair
 
 # Build rule for target.
@@ -178,6 +191,19 @@ test_seq: cmake_check_build_system
 test_seq/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_seq.dir/build.make CMakeFiles/test_seq.dir/build
 .PHONY : test_seq/fast
+
+#=============================================================================
+# Target rules for targets named test_omp
+
+# Build rule for target.
+test_omp: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_omp
+.PHONY : test_omp
+
+# fast build rule for target.
+test_omp/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/build
+.PHONY : test_omp/fast
 
 src/common/grid.o: src/common/grid.cpp.o
 .PHONY : src/common/grid.o
@@ -323,6 +349,57 @@ src/common/voxel.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_common.dir/build.make CMakeFiles/icp_common.dir/src/common/voxel.cpp.s
 .PHONY : src/common/voxel.cpp.s
 
+src/omp/icp_omp.o: src/omp/icp_omp.cpp.o
+.PHONY : src/omp/icp_omp.o
+
+# target to build an object file
+src/omp/icp_omp.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/src/omp/icp_omp.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/src/omp/icp_omp.cpp.o
+.PHONY : src/omp/icp_omp.cpp.o
+
+src/omp/icp_omp.i: src/omp/icp_omp.cpp.i
+.PHONY : src/omp/icp_omp.i
+
+# target to preprocess a source file
+src/omp/icp_omp.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/src/omp/icp_omp.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/src/omp/icp_omp.cpp.i
+.PHONY : src/omp/icp_omp.cpp.i
+
+src/omp/icp_omp.s: src/omp/icp_omp.cpp.s
+.PHONY : src/omp/icp_omp.s
+
+# target to generate assembly for a file
+src/omp/icp_omp.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/src/omp/icp_omp.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/src/omp/icp_omp.cpp.s
+.PHONY : src/omp/icp_omp.cpp.s
+
+src/omp/main.o: src/omp/main.cpp.o
+.PHONY : src/omp/main.o
+
+# target to build an object file
+src/omp/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/src/omp/main.cpp.o
+.PHONY : src/omp/main.cpp.o
+
+src/omp/main.i: src/omp/main.cpp.i
+.PHONY : src/omp/main.i
+
+# target to preprocess a source file
+src/omp/main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/src/omp/main.cpp.i
+.PHONY : src/omp/main.cpp.i
+
+src/omp/main.s: src/omp/main.cpp.s
+.PHONY : src/omp/main.s
+
+# target to generate assembly for a file
+src/omp/main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/src/omp/main.cpp.s
+.PHONY : src/omp/main.cpp.s
+
 src/seq/main.o: src/seq/main.cpp.o
 .PHONY : src/seq/main.o
 
@@ -371,6 +448,30 @@ src/tools/make_pair.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/make_pair.dir/build.make CMakeFiles/make_pair.dir/src/tools/make_pair.cpp.s
 .PHONY : src/tools/make_pair.cpp.s
 
+tests/test_omp.o: tests/test_omp.cpp.o
+.PHONY : tests/test_omp.o
+
+# target to build an object file
+tests/test_omp.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/tests/test_omp.cpp.o
+.PHONY : tests/test_omp.cpp.o
+
+tests/test_omp.i: tests/test_omp.cpp.i
+.PHONY : tests/test_omp.i
+
+# target to preprocess a source file
+tests/test_omp.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/tests/test_omp.cpp.i
+.PHONY : tests/test_omp.cpp.i
+
+tests/test_omp.s: tests/test_omp.cpp.s
+.PHONY : tests/test_omp.s
+
+# target to generate assembly for a file
+tests/test_omp.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/tests/test_omp.cpp.s
+.PHONY : tests/test_omp.cpp.s
+
 tests/test_seq.o: tests/test_seq.cpp.o
 .PHONY : tests/test_seq.o
 
@@ -405,8 +506,10 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... icp_common"
+	@echo "... icp_omp"
 	@echo "... icp_seq"
 	@echo "... make_pair"
+	@echo "... test_omp"
 	@echo "... test_seq"
 	@echo "... src/common/grid.o"
 	@echo "... src/common/grid.i"
@@ -426,12 +529,21 @@ help:
 	@echo "... src/common/voxel.o"
 	@echo "... src/common/voxel.i"
 	@echo "... src/common/voxel.s"
+	@echo "... src/omp/icp_omp.o"
+	@echo "... src/omp/icp_omp.i"
+	@echo "... src/omp/icp_omp.s"
+	@echo "... src/omp/main.o"
+	@echo "... src/omp/main.i"
+	@echo "... src/omp/main.s"
 	@echo "... src/seq/main.o"
 	@echo "... src/seq/main.i"
 	@echo "... src/seq/main.s"
 	@echo "... src/tools/make_pair.o"
 	@echo "... src/tools/make_pair.i"
 	@echo "... src/tools/make_pair.s"
+	@echo "... tests/test_omp.o"
+	@echo "... tests/test_omp.i"
+	@echo "... tests/test_omp.s"
 	@echo "... tests/test_seq.o"
 	@echo "... tests/test_seq.i"
 	@echo "... tests/test_seq.s"

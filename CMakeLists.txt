@@ -65,9 +65,11 @@ endif()
 
 # 2) OpenMP
 if(OpenMP_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/src/omp/main.cpp)
-  add_executable(icp_omp src/omp/main.cpp)
+  file(GLOB OMP_SRC CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/omp/*.cpp)
+  add_executable(icp_omp ${OMP_SRC})
   target_link_libraries(icp_omp PRIVATE icp_common OpenMP::OpenMP_CXX)
 endif()
+
 
 # 3) MPI (e ibrido MPI+OpenMP se OpenMP e' disponibile)
 if(MPI_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/src/mpi/main.cpp)
@@ -99,6 +101,13 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/tests/test_seq.cpp)
   add_executable(test_seq tests/test_seq.cpp)
   target_link_libraries(test_seq PRIVATE icp_common)
   add_test(NAME test_seq COMMAND test_seq)
+endif()
+
+if(OpenMP_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/tests/test_omp.cpp)
+  add_executable(test_omp tests/test_omp.cpp src/omp/icp_omp.cpp)
+  target_include_directories(test_omp PRIVATE ${CMAKE_SOURCE_DIR}/src/omp)
+  target_link_libraries(test_omp PRIVATE icp_common OpenMP::OpenMP_CXX)
+  add_test(NAME test_omp COMMAND test_omp)
 endif()
 
 # ---------------------------------------------------------------- riepilogo

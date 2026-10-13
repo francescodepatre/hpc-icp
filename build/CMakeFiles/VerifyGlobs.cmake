@@ -16,3 +16,14 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   message("-- GLOB mismatch!")
   file(TOUCH_NOCREATE "/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles/cmake.verify_globs")
 endif()
+
+# OMP_SRC at CMakeLists.txt:68 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/home/francesco-de-patre/Desktop/progetto_HPC/src/omp/*.cpp")
+set(OLD_GLOB
+  "/home/francesco-de-patre/Desktop/progetto_HPC/src/omp/icp_omp.cpp"
+  "/home/francesco-de-patre/Desktop/progetto_HPC/src/omp/main.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles/cmake.verify_globs")
+endif()
