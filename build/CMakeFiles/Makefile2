@@ -66,9 +66,11 @@ CMAKE_BINARY_DIR = /home/francesco-de-patre/Desktop/progetto_HPC/build
 all: CMakeFiles/icp_common.dir/all
 all: CMakeFiles/icp_seq.dir/all
 all: CMakeFiles/icp_omp.dir/all
+all: CMakeFiles/icp_mpi.dir/all
 all: CMakeFiles/make_pair.dir/all
 all: CMakeFiles/test_seq.dir/all
 all: CMakeFiles/test_omp.dir/all
+all: CMakeFiles/test_mpi.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -79,9 +81,11 @@ preinstall:
 clean: CMakeFiles/icp_common.dir/clean
 clean: CMakeFiles/icp_seq.dir/clean
 clean: CMakeFiles/icp_omp.dir/clean
+clean: CMakeFiles/icp_mpi.dir/clean
 clean: CMakeFiles/make_pair.dir/clean
 clean: CMakeFiles/test_seq.dir/clean
 clean: CMakeFiles/test_omp.dir/clean
+clean: CMakeFiles/test_mpi.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -117,7 +121,7 @@ CMakeFiles/icp_common.dir/clean:
 CMakeFiles/icp_seq.dir/all: CMakeFiles/icp_common.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_seq.dir/build.make CMakeFiles/icp_seq.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_seq.dir/build.make CMakeFiles/icp_seq.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=11,12 "Built target icp_seq"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=14,15 "Built target icp_seq"
 .PHONY : CMakeFiles/icp_seq.dir/all
 
 # Build rule for subdir invocation for target.
@@ -143,7 +147,7 @@ CMakeFiles/icp_seq.dir/clean:
 CMakeFiles/icp_omp.dir/all: CMakeFiles/icp_common.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_omp.dir/build.make CMakeFiles/icp_omp.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=8,9,10 "Built target icp_omp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=11,12,13 "Built target icp_omp"
 .PHONY : CMakeFiles/icp_omp.dir/all
 
 # Build rule for subdir invocation for target.
@@ -163,13 +167,39 @@ CMakeFiles/icp_omp.dir/clean:
 .PHONY : CMakeFiles/icp_omp.dir/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/icp_mpi.dir
+
+# All Build rule for target.
+CMakeFiles/icp_mpi.dir/all: CMakeFiles/icp_common.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_mpi.dir/build.make CMakeFiles/icp_mpi.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_mpi.dir/build.make CMakeFiles/icp_mpi.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=8,9,10 "Built target icp_mpi"
+.PHONY : CMakeFiles/icp_mpi.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/icp_mpi.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles 10
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/icp_mpi.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles 0
+.PHONY : CMakeFiles/icp_mpi.dir/rule
+
+# Convenience name for target.
+icp_mpi: CMakeFiles/icp_mpi.dir/rule
+.PHONY : icp_mpi
+
+# clean rule for target.
+CMakeFiles/icp_mpi.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/icp_mpi.dir/build.make CMakeFiles/icp_mpi.dir/clean
+.PHONY : CMakeFiles/icp_mpi.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/make_pair.dir
 
 # All Build rule for target.
 CMakeFiles/make_pair.dir/all: CMakeFiles/icp_common.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/make_pair.dir/build.make CMakeFiles/make_pair.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/make_pair.dir/build.make CMakeFiles/make_pair.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=13,14 "Built target make_pair"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=16,17 "Built target make_pair"
 .PHONY : CMakeFiles/make_pair.dir/all
 
 # Build rule for subdir invocation for target.
@@ -195,7 +225,7 @@ CMakeFiles/make_pair.dir/clean:
 CMakeFiles/test_seq.dir/all: CMakeFiles/icp_common.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_seq.dir/build.make CMakeFiles/test_seq.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_seq.dir/build.make CMakeFiles/test_seq.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=18,19 "Built target test_seq"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=24,25 "Built target test_seq"
 .PHONY : CMakeFiles/test_seq.dir/all
 
 # Build rule for subdir invocation for target.
@@ -221,7 +251,7 @@ CMakeFiles/test_seq.dir/clean:
 CMakeFiles/test_omp.dir/all: CMakeFiles/icp_common.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=15,16,17 "Built target test_omp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=21,22,23 "Built target test_omp"
 .PHONY : CMakeFiles/test_omp.dir/all
 
 # Build rule for subdir invocation for target.
@@ -239,6 +269,32 @@ test_omp: CMakeFiles/test_omp.dir/rule
 CMakeFiles/test_omp.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_omp.dir/build.make CMakeFiles/test_omp.dir/clean
 .PHONY : CMakeFiles/test_omp.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_mpi.dir
+
+# All Build rule for target.
+CMakeFiles/test_mpi.dir/all: CMakeFiles/icp_common.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mpi.dir/build.make CMakeFiles/test_mpi.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mpi.dir/build.make CMakeFiles/test_mpi.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles --progress-num=18,19,20 "Built target test_mpi"
+.PHONY : CMakeFiles/test_mpi.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_mpi.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles 10
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_mpi.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/francesco-de-patre/Desktop/progetto_HPC/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_mpi.dir/rule
+
+# Convenience name for target.
+test_mpi: CMakeFiles/test_mpi.dir/rule
+.PHONY : test_mpi
+
+# clean rule for target.
+CMakeFiles/test_mpi.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mpi.dir/build.make CMakeFiles/test_mpi.dir/clean
+.PHONY : CMakeFiles/test_mpi.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

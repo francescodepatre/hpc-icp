@@ -73,11 +73,12 @@ endif()
 
 # 3) MPI (e ibrido MPI+OpenMP se OpenMP e' disponibile)
 if(MPI_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/src/mpi/main.cpp)
-  add_executable(icp_mpi src/mpi/main.cpp)
+  add_executable(icp_mpi src/mpi/main.cpp src/mpi/icp_mpi.cpp)
+  target_include_directories(icp_mpi PRIVATE ${CMAKE_SOURCE_DIR}/src/mpi)
   target_link_libraries(icp_mpi PRIVATE icp_common MPI::MPI_CXX)
   if(OpenMP_CXX_FOUND)
+    # -fopenmp attiva i pragma in icp_mpi.cpp: con --threads T si ottiene la versione ibrida
     target_link_libraries(icp_mpi PRIVATE OpenMP::OpenMP_CXX)
-    target_compile_definitions(icp_mpi PRIVATE USE_OPENMP)
   endif()
 endif()
 
@@ -108,6 +109,22 @@ if(OpenMP_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/tests/test_omp.cpp)
   target_include_directories(test_omp PRIVATE ${CMAKE_SOURCE_DIR}/src/omp)
   target_link_libraries(test_omp PRIVATE icp_common OpenMP::OpenMP_CXX)
   add_test(NAME test_omp COMMAND test_omp)
+endif()
+
+if(MPI_CXX_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/tests/test_mpi.cpp")
+  enable_testing()
+  add_executable(test_mpi tests/test_mpi.cpp src/mpi/icp_mpi.cpp)
+  target_include_directories(test_mpi PRIVATE "${CMAKE_SOURCE_DIR}/src/mpi")
+  target_link_libraries(test_mpi PRIVATE icp_common MPI::MPI_CXX)
+  if(OpenMP_CXX_FOUND)
+    target_link_libraries(test_mpi PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+  # ctest lancia il test con 2 e con 3 rank (3 non divide i punti: caso dei blocchi diseguali)
+  foreach(NP 2 3)
+    add_test(NAME test_mpi_np${NP}
+             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${NP}
+                     ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_mpi> ${MPIEXEC_POSTFLAGS})
+  endforeach()
 endif()
 
 # ---------------------------------------------------------------- riepilogo

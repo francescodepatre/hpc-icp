@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -march=native CMakeFiles/icp_mpi.dir/src/mpi/main.cpp.o CMakeFiles/icp_mpi.dir/src/mpi/icp_mpi.cpp.o -o icp_mpi  -Wl,-rpath,/usr/lib/x86_64-linux-gnu/openmpi/lib libicp_common.a /usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi_cxx.so /usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi.so /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a 

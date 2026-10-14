@@ -1,0 +1,1 @@
+variant,threads,seq,i,j,rep,n_src,n_tgt,iters,dmax,t_grid,t_apply,t_nn,t_reduce,t_solve,t_total,rot_err,trans_err
