@@ -17,7 +17,9 @@ endif()
 
 # -march=native: compila sulla macchina dove esegui (login node = compute node?)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
-add_compile_options(-Wall -Wextra)
+# i warning solo per C++ (nvcc non accetta -Wall: per CUDA si passano all'host compiler)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall> $<$<COMPILE_LANGUAGE:CXX>:-Wextra>
+                    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall>)
 
 # ---------------------------------------------------------------- librerie
 if(ENABLE_OPENMP)
@@ -87,6 +89,7 @@ if(HAVE_CUDA AND EXISTS ${CMAKE_SOURCE_DIR}/src/cuda/main.cu)
   file(GLOB CUDA_SRC CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/cuda/*.cu)
   add_executable(icp_cuda ${CUDA_SRC})
   target_link_libraries(icp_cuda PRIVATE icp_common)
+  target_include_directories(icp_cuda PRIVATE ${CMAKE_SOURCE_DIR}/src/cuda)
   set_target_properties(icp_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION OFF)
   # per profilare con Nsight Compute aggiungi: target_compile_options(icp_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
 endif()
@@ -109,6 +112,14 @@ if(OpenMP_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/tests/test_omp.cpp)
   target_include_directories(test_omp PRIVATE ${CMAKE_SOURCE_DIR}/src/omp)
   target_link_libraries(test_omp PRIVATE icp_common OpenMP::OpenMP_CXX)
   add_test(NAME test_omp COMMAND test_omp)
+endif()
+
+if(HAVE_CUDA AND EXISTS ${CMAKE_SOURCE_DIR}/tests/test_cuda.cu)
+  enable_testing()
+  add_executable(test_cuda tests/test_cuda.cu src/cuda/icp_cuda.cu)
+  target_include_directories(test_cuda PRIVATE ${CMAKE_SOURCE_DIR}/src/cuda)
+  target_link_libraries(test_cuda PRIVATE icp_common)
+  add_test(NAME test_cuda COMMAND test_cuda)
 endif()
 
 if(MPI_CXX_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/tests/test_mpi.cpp")
