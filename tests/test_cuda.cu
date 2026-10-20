@@ -1,8 +1,3 @@
-// Verifica che la versione CUDA dia gli stessi risultati della sequenziale,
-// per diverse dimensioni di blocco e per i casi limite (n non multiplo del blocco, nessuna coppia).
-//
-// Tolleranze piu' larghe di test_omp: sulla GPU nvcc puo' fondere moltiplicazioni e somme (FMA)
-// in modo diverso dalla CPU, e due vicini quasi a pari distanza possono scambiarsi.
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -101,13 +96,13 @@ int main() {
         confronta("superficie 10000 punti", src, tgt, prm, opt);
     }
 
-    {   // n non multiplo del blocco, nuvola piu' piccola della griglia di blocchi
+    {   
         PointCloud t2 = make_surface(1237, 5), b2 = make_surface(1001, 6);
         PointCloud s2 = make_source(b2, G, 7, 0.002);
         confronta("n dispari (1001 / 1237)", s2, t2, prm, CudaOptions());
     }
 
-    {   // un cluster molto denso: celle con carichi molto diversi
+    {   
         PointCloud t3 = tgt, s3 = src;
         std::mt19937 rng(9);
         std::normal_distribution<float> g(0.2f, 0.02f);
@@ -115,7 +110,7 @@ int main() {
         confronta("con cluster denso", s3, t3, prm, CudaOptions());
     }
 
-    {   // convergenza verso la trasformazione vera
+    {   
         IcpResult rc = icp_cuda(src, tgt, prm);
         double rot, tr;
         pose_error(rc.T, G, rot, tr);
@@ -123,7 +118,7 @@ int main() {
         CHECK(rot < 0.2 && tr < 0.01, "ICP CUDA non converge alla trasformazione vera");
     }
 
-    {   // nessuna coppia valida: sorgente lontanissima. Seq e CUDA devono fermarsi alla prima iterazione.
+    {   
         PointCloud far;
         for (size_t i = 0; i < src.size(); ++i) far.push_back(src.x[i] + 1000.f, src.y[i], src.z[i]);
         IcpResult rs = icp_seq(far, tgt, prm);
@@ -133,7 +128,7 @@ int main() {
         CHECK(rc.rmse.size() == rs.rmse.size() && rc.matches.back() == 0, "caso senza coppie gestito male");
     }
 
-    {   // parametri invalidi: devono dare un'eccezione, non un crash
+    {   
         bool thrown = false;
         CudaOptions bad;
         bad.block_nn = 100;

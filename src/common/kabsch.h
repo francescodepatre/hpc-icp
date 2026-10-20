@@ -2,16 +2,9 @@
 
 #ifndef KABSCH_H
 #define KABSCH_H
-// Pezzo 5: stima di R e t a partire dalle coppie di corrispondenze.
-//
-// Si usano SOMME (non centrate) accumulate in double: sono solo 16 numeri e si sommano
-// facilmente in parallelo (reduction OpenMP, MPI_Allreduce, riduzione CUDA).
-// La rotazione ottima e' calcolata con il metodo di Horn (autovettore massimo di una
-// matrice simmetrica 4x4 -> quaternione). Da' lo stesso ottimo ai minimi quadrati di
-// Kabsch/SVD, senza dipendenze esterne e senza il problema delle riflessioni.
+
 #include <cmath>
 
-// Trasformazione rigida: p' = R p + t. R e' 3x3 in ordine per righe.
 struct Rigid {
     double R[9];
     double t[3];
@@ -22,7 +15,6 @@ inline Rigid rigid_identity() {
     return T;
 }
 
-// Composizione: (A o B)(p) = A(B(p))
 inline Rigid rigid_compose(const Rigid& A, const Rigid& B) {
     Rigid C;
     for (int i = 0; i < 3; ++i) {
@@ -48,12 +40,11 @@ inline void rigid_apply(const Rigid& T, double x, double y, double z, double out
     out[2] = T.R[6] * x + T.R[7] * y + T.R[8] * z + T.t[2];
 }
 
-// Somme sulle coppie (p = sorgente, q = target). In totale 1 + 3 + 3 + 9 = 16 valori.
 struct CorrSums {
     double n = 0;
     double sp[3] = {0, 0, 0};
     double sq[3] = {0, 0, 0};
-    double spq[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};  // spq[3*a+b] = somma p_a * q_b
+    double spq[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};  
 
     void add(double px, double py, double pz, double qx, double qy, double qz) {
         n += 1;
@@ -65,7 +56,6 @@ struct CorrSums {
     }
 };
 
-// Trasformazione T che minimizza sum |R p + t - q|^2. Ritorna false se ci sono meno di 3 coppie.
 bool kabsch_from_sums(const CorrSums& s, Rigid& out);
 
 #endif

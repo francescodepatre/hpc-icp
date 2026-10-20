@@ -126,7 +126,7 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
     if (line != "ply") 
         return fail("non e' un file PLY");
 
-    int fmt = -1;  // 0 = ascii, 1 = binary little endian
+    int fmt = -1;  
     std::vector<Element> elems;
     bool header_end = false;
 
@@ -178,7 +178,6 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
         }
 
         if (e.name != "vertex") {
-            // Element before vertices: skip (raro).
             if (has_list) 
                 return fail("elemento con liste prima dei vertici: non supportato");
             if (fmt == 0) {
@@ -241,7 +240,7 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
                 pc.push_back(static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
             }
         }
-        return true;  // other elements (faces, ...) are not needed
+        return true;  
     }
     return fail("nessun elemento 'vertex'");
 }
@@ -269,7 +268,7 @@ bool load_kitti_bin(const std::string& path, PointCloud& pc, std::string* err) {
         for (size_t i = 0; i < m; ++i) pc.push_back(buf[4 * i], buf[4 * i + 1], buf[4 * i + 2]);
         done += m;
     }
-    return true;  // la reflectance (4th column) discarded
+    return true;  
 }
 
 bool load_cloud(const std::string& path, PointCloud& pc, std::string* err) {

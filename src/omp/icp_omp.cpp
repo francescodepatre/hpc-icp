@@ -3,23 +3,210 @@
 #include <omp.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <fstream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "metrics.h"
 
+using Mat4 = std::array<double, 16>;
+
+// Crea una matrice identità 4x4.
+static Mat4 identity4()
+{
+    Mat4 M{};
+
+    M[0]  = 1.0;
+    M[5]  = 1.0;
+    M[10] = 1.0;
+    M[15] = 1.0;
+
+    return M;
+}
+
+
+// Converte i 12 valori di una matrice KITTI 3x4
+// in una matrice omogenea 4x4.
+static Mat4 to4x4(const double m[12])
+{
+    Mat4 M = identity4();
+
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            M[4 * i + j] = m[4 * i + j];
+        }
+    }
+
+    return M;
+}
+
+
+// Legge tutte le pose dal file KITTI poses/XX.txt.
+// Ogni riga contiene 12 valori, corrispondenti
+// a una matrice di trasformazione 3x4.
+static bool load_kitti_poses(
+    const std::string& path,
+    std::vector<Mat4>& poses)
+{
+    std::ifstream f(path);
+
+    if (!f.is_open()) {
+        std::cerr << "Impossibile aprire il file delle pose: "
+                  << path << '\n';
+        return false;
+    }
+
+    poses.clear();
+
+    std::string line;
+
+    while (std::getline(f, line)) {
+        if (line.find_first_not_of(" \t\r\n") == std::string::npos) {
+            continue;
+        }
+
+        std::istringstream iss(line);
+
+        double m[12];
+
+        for (int i = 0; i < 12; ++i) {
+            if (!(iss >> m[i])) {
+                std::cerr << "Riga non valida nel file delle pose: "
+                          << path << '\n';
+                return false;
+            }
+        }
+
+        poses.push_back(to4x4(m));
+    }
+
+    return !poses.empty();
+}
+
+
+// Legge la matrice Tr dal file calib.txt di KITTI.
+// Gli altri parametri di calibrazione vengono ignorati.
+static bool load_kitti_calib(
+    const std::string& path,
+    Mat4& Tr)
+{
+    std::ifstream f(path);
+
+    if (!f.is_open()) {
+        std::cerr << "Impossibile aprire la calibrazione: "
+                  << path << '\n';
+        return false;
+    }
+
+    std::string line;
+
+    while (std::getline(f, line)) {
+        if (line.rfind("Tr:", 0) != 0) {
+            continue;
+        }
+
+        std::istringstream iss(line.substr(3));
+
+        double m[12];
+
+        for (int i = 0; i < 12; ++i) {
+            if (!(iss >> m[i])) {
+                std::cerr << "Matrice Tr non valida in: "
+                          << path << '\n';
+                return false;
+            }
+        }
+
+        Tr = to4x4(m);
+
+        return true;
+    }
+
+    std::cerr << "Matrice Tr non trovata in: "
+              << path << '\n';
+
+    return false;
+}
+
+
+// Moltiplicazione di due matrici 4x4.
+static Mat4 multiply4(const Mat4& A, const Mat4& B)
+{
+    Mat4 C{};
+
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            for (int k = 0; k < 4; ++k) {
+                C[4 * i + j] +=
+                    A[4 * i + k] * B[4 * k + j];
+            }
+        }
+    }
+
+    return C;
+}
+
+
+// Inversa di una trasformazione rigida:
+// [R t]^-1 = [R^T  -R^T t]
+// [0 1]      [0       1  ]
+static Mat4 inverse_rigid4(const Mat4& T)
+{
+    Mat4 inv = identity4();
+
+    // Trasposta della rotazione.
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            inv[4 * i + j] = T[4 * j + i];
+        }
+    }
+
+    // Nuova traslazione: -R^T * t.
+    for (int i = 0; i < 3; ++i) {
+        inv[4 * i + 3] = 0.0;
+
+        for (int j = 0; j < 3; ++j) {
+            inv[4 * i + 3] -=
+                inv[4 * i + j] * T[4 * j + 3];
+        }
+    }
+
+    return inv;
+}
+
+
+// Converte una matrice 4x4 nella struttura Rigid
+// già utilizzata dal tuo ICP.
+static Rigid to_rigid(const Mat4& M)
+{
+    Rigid T{};
+
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            T.R[3 * i + j] = M[4 * i + j];
+        }
+
+        T.t[i] = M[4 * i + 3];
+    }
+
+    return T;
+}
+
+
 namespace {
 
-const long long MAX_CELLS = 400000000LL;               // come nella versione sequenziale
-const size_t MAX_HIST_ENTRIES = 50ull * 1000 * 1000;   // limite per gli istogrammi per-thread
+const long long MAX_CELLS = 400000000LL;               
+const size_t MAX_HIST_ENTRIES = 50ull * 1000 * 1000;  
 
 inline int cell_coord(float v, float minv, float inv) {
     return static_cast<int>(std::floor((v - minv) * inv));
 }
 
-// Una CorrSums per thread, allineata alla cache line per evitare false sharing.
 struct alignas(64) PaddedSums {
     CorrSums s;
 };
@@ -30,28 +217,14 @@ void merge_sums(CorrSums& a, const CorrSums& b) {
     for (int k = 0; k < 9; ++k) a.spq[k] += b.spq[k];
 }
 
-}  // namespace
+}
 
-// ---------------------------------------------------------------------------------------
-// Griglia parallela (counting sort con istogrammi per-thread)
-//
-//  1) ogni thread, su un blocco contiguo di punti, calcola l'indice di cella e il proprio
-//     istogramma (nessuna race: ogni thread scrive solo nella sua riga)
-//  2) per ogni cella si convertono i conteggi dei thread in offset (somma prefissa sui thread)
-//     e si calcola il totale della cella
-//  3) prefix sum globale sulle celle (sequenziale: O(ncells), trascurabile per queste griglie)
-//  4) scatter: ogni thread scrive i suoi punti in posizione cellStart[c] + offset[t][c]
-//
-// Poiche' i blocchi sono contigui e ordinati per thread, l'ordine dei punti dentro ogni cella
-// e' identico a quello della versione sequenziale.
-// ---------------------------------------------------------------------------------------
 void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
     const size_t n = pts.size();
     if (n == 0) throw std::runtime_error("grid_build_omp: nuvola vuota");
     if (cell <= 0.f) throw std::runtime_error("grid_build_omp: cell <= 0");
     if (n >= 2147483647ull) throw std::runtime_error("grid_build_omp: troppi punti per indici int");
 
-    // bounding box con riduzioni min/max
     float minx = pts.x[0], miny = pts.y[0], minz = pts.z[0];
     float maxx = minx, maxy = miny, maxz = minz;
 #pragma omp parallel for schedule(static) reduction(min : minx, miny, minz) reduction(max : maxx, maxy, maxz)
@@ -75,13 +248,12 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
 
     const int maxT = omp_get_max_threads();
     if (static_cast<size_t>(maxT) * static_cast<size_t>(ncells) > MAX_HIST_ENTRIES) {
-        // Istogrammi per-thread troppo grandi: si ripiega sulla versione sequenziale.
         grid_build(pts, cell, g);
         return;
     }
 
     std::vector<int> cid(n);
-    std::vector<int> cnt(static_cast<size_t>(maxT) * static_cast<size_t>(ncells), 0);  // [thread][cella]
+    std::vector<int> cnt(static_cast<size_t>(maxT) * static_cast<size_t>(ncells), 0);  
     g.cellStart.assign(static_cast<size_t>(ncells) + 1, 0);
     g.x.resize(n); g.y.resize(n); g.z.resize(n); g.orig.resize(n);
 
@@ -93,7 +265,6 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
         const size_t hi = n * static_cast<size_t>(t + 1) / static_cast<size_t>(T);
         int* mine = cnt.data() + static_cast<size_t>(t) * static_cast<size_t>(ncells);
 
-        // 1) cella di ogni punto e istogramma privato
         for (size_t i = lo; i < hi; ++i) {
             int ix = std::min(cell_coord(pts.x[i], g.minx, g.inv), g.nx - 1);
             int iy = std::min(cell_coord(pts.y[i], g.miny, g.inv), g.ny - 1);
@@ -104,7 +275,6 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
         }
 #pragma omp barrier
 
-        // 2) per ogni cella: offset di ciascun thread e totale
 #pragma omp for schedule(static)
         for (long long c = 0; c < ncells; ++c) {
             int run = 0;
@@ -115,15 +285,11 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
                 run += v;
             }
             g.cellStart[static_cast<size_t>(c) + 1] = run;
-        }  // barriera implicita
-
-        // 3) prefix sum globale (un solo thread)
+        }  
 #pragma omp single
         {
             for (long long c = 0; c < ncells; ++c) g.cellStart[c + 1] += g.cellStart[c];
-        }  // barriera implicita
-
-        // 4) scatter
+        }  
         for (size_t i = lo; i < hi; ++i) {
             const int c = cid[i];
             const int pos = g.cellStart[c] + mine[c]++;
@@ -135,9 +301,6 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
     }
 }
 
-// ---------------------------------------------------------------------------------------
-// ICP parallelo
-// ---------------------------------------------------------------------------------------
 IcpResult icp_omp(const PointCloud& src, const PointCloud& tgt, const IcpParams& p, const Rigid& init) {
     IcpResult res;
     res.T = init;
@@ -157,7 +320,7 @@ IcpResult icp_omp(const PointCloud& src, const PointCloud& tgt, const IcpParams&
     std::vector<PaddedSums> parts(static_cast<size_t>(maxT));
 
     for (int it = 0; it < p.iters; ++it) {
-        // --- apply
+        
         t.tic();
         {
             const Rigid T = res.T;
@@ -172,8 +335,6 @@ IcpResult icp_omp(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         }
         res.tm.apply += t.toc();
 
-        // --- nn: ogni query scrive solo match[i] (nessuna race).
-        // schedule(runtime): si sceglie da shell con OMP_SCHEDULE (static, dynamic,64, guided...)
         t.tic();
         double sum_d2 = 0;
         size_t valid = 0;
@@ -185,8 +346,6 @@ IcpResult icp_omp(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         }
         res.tm.nn += t.toc();
 
-        // --- reduce: una CorrSums privata per thread, unite in ordine di thread
-        // (con schedule static il risultato e' riproducibile a parita' di numero di thread)
         t.tic();
         for (auto& ps : parts) ps.s = CorrSums();
 #pragma omp parallel num_threads(maxT)
@@ -204,7 +363,6 @@ IcpResult icp_omp(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         for (const auto& ps : parts) merge_sums(s, ps.s);
         res.tm.reduce += t.toc();
 
-        // --- solve (sequenziale)
         t.tic();
         res.rmse.push_back(valid ? std::sqrt(sum_d2 / static_cast<double>(valid)) : 0.0);
         res.matches.push_back(valid);

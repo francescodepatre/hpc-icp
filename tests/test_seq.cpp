@@ -1,5 +1,3 @@
-// Test della baseline: kabsch, griglia vs brute force, voxel, I/O, ICP end-to-end.
-// Esce con codice != 0 se un controllo fallisce.
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -67,7 +65,6 @@ static void test_kabsch() {
     std::printf("  errore rot %.2e gradi, trasl %.2e\n", rot, tr);
     CHECK(rot < 1e-6 && tr < 1e-9, "rot=%g tr=%g", rot, tr);
 
-    // composizione e inversa
     Rigid I = rigid_compose(rigid_inverse(gt), gt);
     CHECK(rotation_error_deg(I.R, rigid_identity().R) < 1e-6 && std::fabs(I.t[0]) + std::fabs(I.t[1]) + std::fabs(I.t[2]) < 1e-9,
           "inversa/composizione errate");
@@ -151,10 +148,10 @@ static void test_io() {
 
 static void test_icp() {
     std::printf("[ICP end-to-end]\n");
-    // target e sorgente: campionamenti INDIPENDENTI della stessa superficie (come due scansioni)
+
     PointCloud tgt = make_surface(10000, 11);
     PointCloud base = make_surface(10000, 12);
-    // sorgente = G^-1(base) + rumore, quindi ICP deve recuperare G (sorgente -> target)
+    
     Rigid G = make_rigid(1, 2, 3, 6.0, 0.05, -0.03, 0.02);
     Rigid Gi = rigid_inverse(G);
     std::mt19937 rng(21);

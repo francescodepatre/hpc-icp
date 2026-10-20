@@ -1,5 +1,3 @@
-// Verifica che la versione OpenMP dia gli stessi risultati della sequenziale,
-// per diversi numeri di thread.
 #include <omp.h>
 
 #include <cmath>

@@ -11,7 +11,7 @@ const long long MAX_CELLS = 400000000LL;  // safety limit on memory (~1.6 GB di 
 inline int cell_coord(float v, float minv, float inv) {
     return static_cast<int>(std::floor((v - minv) * inv));
 }
-}  // namespace
+} 
 
 void grid_build(const PointCloud& pts, float cell, Grid& g) {
     const size_t n = pts.size();
@@ -38,7 +38,6 @@ void grid_build(const PointCloud& pts, float cell, Grid& g) {
         throw std::runtime_error("grid_build: " + std::to_string(ncells) +
                                  " celle: troppe. Aumenta il lato della cella o fai downsampling.");
 
-    // Passo 1: indice di cella di ogni punto e istogramma
     std::vector<int> cid(n);
     g.cellStart.assign(static_cast<size_t>(ncells) + 1, 0);
     for (size_t i = 0; i < n; ++i) {
@@ -49,10 +48,8 @@ void grid_build(const PointCloud& pts, float cell, Grid& g) {
         g.cellStart[cid[i] + 1]++;
     }
 
-    // Passo 2: prefix sum -> cellStart[c] e' l'inizio della cella c
     for (long long c = 0; c < ncells; ++c) g.cellStart[c + 1] += g.cellStart[c];
 
-    // Passo 3: scatter dei punti nella posizione ordinata
     g.x.resize(n); g.y.resize(n); g.z.resize(n); g.orig.resize(n);
     std::vector<int> cursor(g.cellStart.begin(), g.cellStart.end() - 1);
     for (size_t i = 0; i < n; ++i) {
@@ -69,7 +66,6 @@ int grid_nearest(const Grid& g, float px, float py, float pz, float dmax, float*
     const float fy = std::floor((py - g.miny) * g.inv);
     const float fz = std::floor((pz - g.minz) * g.inv);
 
-    // Punto troppo lontano dal bounding box: nessun vicino possibile (e niente overflow nel cast)
     if (fx < -1.f || fx > static_cast<float>(g.nx) ||
         fy < -1.f || fy > static_cast<float>(g.ny) ||
         fz < -1.f || fz > static_cast<float>(g.nz))

@@ -18,7 +18,6 @@ PointCloud voxel_downsample(const PointCloud& in, float voxel) {
         minz = std::min(minz, in.z[i]);
     }
 
-    // Chiave a 64 bit: 21 bit per asse (max ~2 milioni di voxel per asse)
     const double inv = 1.0 / static_cast<double>(voxel);
     const uint64_t LIM = 1ull << 21;
 

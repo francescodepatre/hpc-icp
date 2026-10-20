@@ -1,11 +1,11 @@
 #include "icp_mpi.h"
 
 #ifndef _OPENMP
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"  // senza OpenMP i pragma omp sono ignorati
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"  
 #endif
 
 #ifndef OMPI_SKIP_MPICXX
-#define OMPI_SKIP_MPICXX 1   // niente bindings C++ (deprecati, generano warning)
+#define OMPI_SKIP_MPICXX 1  
 #endif
 #ifndef MPICH_SKIP_MPICXX
 #define MPICH_SKIP_MPICXX 1
@@ -24,9 +24,7 @@
 
 namespace {
 
-// Buffer della collettiva: n, sp[3], sq[3], spq[9], somma d^2, numero di coppie = 18 double
 constexpr int NBUF = 18;
-// Messaggio di ritorno: stop, R[9], t[3], rmse, coppie = 15 double
 constexpr int NMSG = 15;
 
 void pack(const CorrSums& s, double sum_d2, double valid, double* b) {
@@ -45,7 +43,6 @@ void unpack(const double* b, CorrSums& s, double& sum_d2, double& valid) {
     valid = b[17];
 }
 
-// Passo di soluzione: dalle somme globali al nuovo T. Riempie msg[NMSG].
 void solve_step(const double* g, const Rigid& cur, double* msg) {
     CorrSums s;
     double sum_d2 = 0, valid = 0;
@@ -58,13 +55,13 @@ void solve_step(const double* g, const Rigid& cur, double* msg) {
     const bool ok = kabsch_from_sums(s, delta);
     if (ok) next = rigid_compose(delta, cur);
 
-    msg[0] = ok ? 0.0 : 1.0;  // 1 = troppe poche coppie: ci si ferma
+    msg[0] = ok ? 0.0 : 1.0; 
     for (int k = 0; k < 9; ++k) msg[1 + k] = next.R[k];
     for (int k = 0; k < 3; ++k) msg[10 + k] = next.t[k];
 }
 
 #ifdef _OPENMP
-struct alignas(64) PaddedSums {  // una CorrSums per thread, senza false sharing
+struct alignas(64) PaddedSums {  
     CorrSums s;
 };
 
@@ -75,7 +72,6 @@ void merge_sums(CorrSums& a, const CorrSums& b) {
 }
 #endif
 
-// Somme locali sulle coppie valide (con OpenMP: un accumulatore per thread, uniti in ordine)
 CorrSums local_sums(const PointCloud& moved, const std::vector<int>& match, const Grid& grid,
                     long long nloc) {
 #ifdef _OPENMP
@@ -106,7 +102,7 @@ CorrSums local_sums(const PointCloud& moved, const std::vector<int>& match, cons
 #endif
 }
 
-}  // namespace
+} 
 
 void bcast_cloud(PointCloud& pc, int root) {
     int rank = 0;
@@ -129,24 +125,20 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Stesso input su tutti i rank: questo controllo e' coerente e non causa deadlock.
     if (src.empty()) throw std::runtime_error("icp_mpi: nuvola sorgente vuota");
 
-    MPI_Barrier(MPI_COMM_WORLD);  // si parte insieme: i tempi sono confrontabili tra i rank
+    MPI_Barrier(MPI_COMM_WORLD);  
 
     IcpResult res;
     res.T = init;
     Timer total, t;
     double t_comm = 0, t_compute = 0;
 
-    // 1) Griglia del target: ogni rank costruisce la propria copia (replicata).
-    //    E' la parte che NON scala con i rank: contribuisce alla frazione seriale.
     Grid grid;
     t.tic();
     grid_build(tgt, p.dmax, grid);
     res.tm.grid = t.toc();
 
-    // 2) Punti sorgente assegnati a questo rank: i = start + k * stride, k = 0..nloc-1
     const long long n = static_cast<long long>(src.size());
     long long start, stride, nloc;
     if (opt.partition == Partition::Block) {
@@ -160,12 +152,11 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         nloc = (n > rank) ? (n - rank + size - 1) / size : 0;
     }
 
-    PointCloud moved;                    // solo i punti locali (indice k)
+    PointCloud moved;                 
     moved.resize(static_cast<size_t>(nloc));
     std::vector<int> match(static_cast<size_t>(nloc), -1);
 
     for (int it = 0; it < p.iters; ++it) {
-        // --- apply
         t.tic();
         {
             const Rigid T = res.T;
@@ -183,7 +174,6 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         res.tm.apply += dt;
         t_compute += dt;
 
-        // --- nn: calcolo puro, SENZA comunicazione (cosi' e' confrontabile tra i rank)
         t.tic();
         double sum_d2 = 0;
         unsigned long long valid = 0;
@@ -197,7 +187,6 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         res.tm.nn += dt;
         t_compute += dt;
 
-        // --- reduce locale: somme sulle coppie valide
         t.tic();
         const CorrSums s_local = local_sums(moved, match, grid, nloc);
         double lbuf[NBUF];
@@ -206,16 +195,12 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         res.tm.reduce += dt;
         t_compute += dt;
 
-        // --- collettiva (UNA per iterazione) + soluzione
         double gbuf[NBUF] = {};
         double msg[NMSG] = {};
         if (opt.collective == Collective::Allreduce) {
             t.tic();
             MPI_Allreduce(lbuf, gbuf, NBUF, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             t_comm += t.toc();
-            // Tutti i rank risolvono. Lo standard MPI non garantisce che il risultato
-            // floating-point di Allreduce sia identico bit a bit su tutti i rank: i T
-            // possono differire a livello di ultimo bit.
             t.tic();
             solve_step(gbuf, res.T, msg);
             res.tm.solve += t.toc();
@@ -228,7 +213,7 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
                 solve_step(gbuf, res.T, msg);
                 res.tm.solve += t.toc();
             }
-            // Rank 0 decide e diffonde T e il flag di stop: T e' identico su tutti i rank.
+            
             t.tic();
             MPI_Bcast(msg, NMSG, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             t_comm += t.toc();
@@ -236,7 +221,7 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
 
         res.rmse.push_back(msg[13]);
         res.matches.push_back(static_cast<size_t>(msg[14]));
-        if (msg[0] != 0.0) break;  // troppo poche coppie
+        if (msg[0] != 0.0) break;  
         for (int k = 0; k < 9; ++k) res.T.R[k] = msg[1 + k];
         for (int k = 0; k < 3; ++k) res.T.t[k] = msg[10 + k];
     }

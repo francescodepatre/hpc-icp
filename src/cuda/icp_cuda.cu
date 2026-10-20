@@ -21,7 +21,6 @@
 
 namespace {
 
-// Buffer sul device con rilascio automatico (sicuro anche con le eccezioni).
 template <typename T>
 struct DevBuf {
     T* p = nullptr;
@@ -32,19 +31,14 @@ struct DevBuf {
     ~DevBuf() { if (p) cudaFree(p); }
 };
 
-// Parametri della griglia passati ai kernel (per valore)
 struct GridParams {
     float minx, miny, minz, inv;
     int nx, ny, nz;
 };
 
-// 1 (n) + 3 (sp) + 3 (sq) + 9 (spq) + 1 (somma d2) quantita' da sommare
 constexpr int NV = 17;
 
-// ---------------------------------------------------------------------------------------
-// apply: moved = T * src. Il calcolo e' in double come nella versione CPU (rigid_apply),
-// poi si memorizza in float: stessa precisione di icp_seq.
-// ---------------------------------------------------------------------------------------
+
 __global__ void apply_kernel(int n, const float4* __restrict__ src, float4* __restrict__ moved, Rigid T) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= n) return;
@@ -58,12 +52,6 @@ __global__ void apply_kernel(int n, const float4* __restrict__ src, float4* __re
     moved[i] = o;
 }
 
-// ---------------------------------------------------------------------------------------
-// nn: stessa logica di grid_nearest() della CPU.
-// Le 3 celle consecutive lungo x (cx0..cx1) sono contigue in memoria (indice = cx + nx*(cy + ny*cz)),
-// quindi per ogni (cz, cy) si scorre UN solo intervallo di punti: 9 intervalli invece di 27 celle.
-// L'ordine di visita e' lo stesso della CPU, quindi a parita' di distanza vince lo stesso punto.
-// ---------------------------------------------------------------------------------------
 __global__ void nn_kernel(int n, const float4* __restrict__ moved, const int* __restrict__ cellStart,
                           const float4* __restrict__ gpts, GridParams g, float dmax,
                           int* __restrict__ match, float* __restrict__ d2out) {
@@ -78,7 +66,6 @@ __global__ void nn_kernel(int n, const float4* __restrict__ moved, const int* __
     int best_j = -1;
     float best = dmax * dmax;
 
-    // Punto troppo lontano dal bounding box: nessun vicino possibile
     if (!(fx < -1.f || fx > static_cast<float>(g.nx) || fy < -1.f || fy > static_cast<float>(g.ny) ||
           fz < -1.f || fz > static_cast<float>(g.nz))) {
         const int ix = static_cast<int>(fx), iy = static_cast<int>(fy), iz = static_cast<int>(fz);
@@ -105,13 +92,7 @@ __global__ void nn_kernel(int n, const float4* __restrict__ moved, const int* __
     d2out[i] = (best_j >= 0) ? best : 0.f;
 }
 
-// ---------------------------------------------------------------------------------------
-// reduce: ogni thread somma (grid-stride) le sue coppie valide in 17 accumulatori double;
-// poi riduzione nel warp con __shfl_down_sync e tra i warp con la memoria condivisa.
-// Ogni blocco scrive i suoi NV parziali in partial[blockIdx.x * NV + k].
-// Tutti i thread del blocco devono arrivare alle barriere: nessun return anticipato.
-// Richiede blockDim.x multiplo di 32 e <= 1024.
-// ---------------------------------------------------------------------------------------
+
 __global__ void reduce_kernel(int n, const float4* __restrict__ moved, const int* __restrict__ match,
                               const float* __restrict__ d2, const float4* __restrict__ gpts,
                               double* __restrict__ partial) {
@@ -178,16 +159,34 @@ std::vector<float4> to_float4(const Grid& g) {
     return v;
 }
 
-}  // namespace
+}  
 
 IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams& p, const Rigid& init,
                    const CudaOptions& opt, CudaInfo* info) {
-    if (src.empty()) throw std::runtime_error("icp_cuda: sorgente vuota");
-    if (src.size() >= static_cast<size_t>(INT_MAX)) throw std::runtime_error("icp_cuda: troppi punti");
+    if (src.empty()) {
+        throw std::runtime_error("icp_cuda: sorgente vuota");
+    }
+
+    if (tgt.empty()) {
+        throw std::runtime_error("icp_cuda: target vuoto");
+    }
+
+    if (src.size() >= static_cast<size_t>(INT_MAX) ||
+        tgt.size() >= static_cast<size_t>(INT_MAX)) {
+        throw std::runtime_error("icp_cuda: troppi punti");
+    }
+
+    if (p.iters <= 0) {
+        throw std::runtime_error("icp_cuda: il numero di iterazioni deve essere positivo");
+    }
+
+    if (!(p.dmax > 0.0f) || !std::isfinite(p.dmax)) {
+        throw std::runtime_error("icp_cuda: dmax deve essere positivo e finito");
+    }
+
     check_block(opt.block_nn, "block_nn");
     check_block(opt.block_other, "block_other");
 
-    // --- contesto CUDA (una tantum, fuori da total)
     Timer ti;
     CUDA_CHECK(cudaSetDevice(opt.device));
     CUDA_CHECK(cudaFree(nullptr));
@@ -204,7 +203,6 @@ IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams
     Timer total;
     Timer t;
 
-    // --- griglia sull'host + upload (tutto contato in tm.grid)
     Grid grid;
     t.tic();
     grid_build(tgt, p.dmax, grid);
@@ -219,7 +217,6 @@ IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams
 
     const int nb_apply = (n + opt.block_other - 1) / opt.block_other;
     const int nb_nn = (n + opt.block_nn - 1) / opt.block_nn;
-    // abbastanza blocchi per riempire la GPU, ma pochi parziali da riportare sull'host
     const int nb_red = std::max(1, std::min(nb_apply, 4 * std::max(prop.multiProcessorCount, 1)));
     DevBuf<double> d_partial(static_cast<size_t>(nb_red) * NV);
     std::vector<double> h_partial(static_cast<size_t>(nb_red) * NV);
@@ -236,21 +233,18 @@ IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams
     gp.nx = grid.nx; gp.ny = grid.ny; gp.nz = grid.nz;
 
     for (int it = 0; it < p.iters; ++it) {
-        // --- apply (parte sempre dalla sorgente ORIGINALE)
         t.tic();
         apply_kernel<<<nb_apply, opt.block_other>>>(n, d_src.p, d_moved.p, res.T);
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
         res.tm.apply += t.toc();
 
-        // --- nn
         t.tic();
         nn_kernel<<<nb_nn, opt.block_nn>>>(n, d_moved.p, d_cellStart.p, d_gpts.p, gp, p.dmax, d_match.p, d_d2.p);
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
         res.tm.nn += t.toc();
 
-        // --- reduce: kernel + download dei parziali + somma sull'host in ordine di blocco
         t.tic();
         reduce_kernel<<<nb_red, opt.block_other>>>(n, d_moved.p, d_match.p, d_d2.p, d_gpts.p, d_partial.p);
         CUDA_CHECK(cudaGetLastError());
@@ -269,7 +263,6 @@ IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams
         const size_t valid = static_cast<size_t>(std::llround(acc[0]));
         res.tm.reduce += t.toc();
 
-        // --- solve (host)
         t.tic();
         res.rmse.push_back(valid ? std::sqrt(sum_d2 / static_cast<double>(valid)) : 0.0);
         res.matches.push_back(valid);

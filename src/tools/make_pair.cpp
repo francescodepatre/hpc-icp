@@ -1,12 +1,3 @@
-// Genera una coppia sorgente/target con ground truth a partire da una nuvola (PLY o .bin).
-//
-// Uso: make_pair <input> <out_prefix> [--n N] [--rot GRADI] [--trans T] [--noise S]
-//                [--outliers FRAZIONE] [--seed SEED]
-//
-// Scrive <out_prefix>_source.ply, <out_prefix>_target.ply e <out_prefix>_gt.txt.
-// target = sottoinsieme casuale dell'input; sorgente = altro sottoinsieme casuale,
-// trasformato con G^-1 e perturbato da rumore gaussiano e outlier.
-// gt.txt contiene G (matrice 4x4 per righe): la trasformazione che porta sorgente -> target.
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -48,7 +39,6 @@ int main(int argc, char** argv) {
     std::normal_distribution<double> gauss(0.0, 1.0);
     std::uniform_real_distribution<double> uni(0.0, 1.0);
 
-    // Estensione della nuvola (per scalare traslazione e outlier)
     float mn[3] = {in.x[0], in.y[0], in.z[0]}, mx[3] = {in.x[0], in.y[0], in.z[0]};
     for (size_t i = 0; i < in.size(); ++i) {
         mn[0] = std::min(mn[0], in.x[i]); mx[0] = std::max(mx[0], in.x[i]);
@@ -58,7 +48,6 @@ int main(int argc, char** argv) {
     const double diag = std::sqrt(double(mx[0] - mn[0]) * (mx[0] - mn[0]) + double(mx[1] - mn[1]) * (mx[1] - mn[1]) +
                                   double(mx[2] - mn[2]) * (mx[2] - mn[2]));
 
-    // G: rotazione di rot_deg attorno a un asse casuale + traslazione di trans * diagonale
     double ax[3] = {gauss(rng), gauss(rng), gauss(rng)};
     const double an = std::sqrt(ax[0] * ax[0] + ax[1] * ax[1] + ax[2] * ax[2]);
     for (double& a : ax) a /= an;
@@ -72,7 +61,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 3; ++i) G.t[i] = trans * diag * dir[i] / dn;
     const Rigid Gi = rigid_inverse(G);
 
-    // due sottoinsiemi casuali indipendenti
     std::vector<size_t> idx(in.size());
     std::iota(idx.begin(), idx.end(), 0);
     PointCloud tgt, src;

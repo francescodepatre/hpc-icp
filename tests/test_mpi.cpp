@@ -1,8 +1,3 @@
-// Verifica che icp_mpi dia gli stessi risultati della versione sequenziale, per tutte le
-// combinazioni partizione x collettiva. Si lancia con:  mpirun -np P ./test_mpi   (P qualsiasi)
-//
-// Ogni rank genera gli STESSI dati sintetici (stesso seme) e calcola il riferimento sequenziale:
-// non serve distribuire nulla per il test.
 #ifndef OMPI_SKIP_MPICXX
 #define OMPI_SKIP_MPICXX 1
 #endif
@@ -98,7 +93,6 @@ int main(int argc, char** argv) {
             pose_error(r.T, ref.T, rot, tr);
             const double drmse = std::fabs(r.rmse.back() - ref.rmse.back());
 
-            // somma dei punti locali = tutti i punti (nessun punto perso o duplicato)
             unsigned long long loc = st.local_points, tot = 0;
             MPI_Allreduce(&loc, &tot, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
 
@@ -115,7 +109,6 @@ int main(int argc, char** argv) {
             CHECK(r.rmse.size() == ref.rmse.size(), "numero di iterazioni diverso");
         }
 
-    // T identico bit a bit su tutti i rank con ReduceBcast
     {
         MpiOptions opt;
         IcpResult r = icp_mpi(src, tgt, prm, rigid_identity(), opt);
@@ -131,7 +124,6 @@ int main(int argc, char** argv) {
         CHECK(!any, "T diverso tra i rank");
     }
 
-    // Meno punti dei rank: nessun deadlock, tutti partecipano alle collettive
     {
         PointCloud tiny;
         tiny.push_back(0.f, 0.f, 0.f);
@@ -145,7 +137,6 @@ int main(int argc, char** argv) {
         CHECK(r.rmse.size() == 1, "con meno di 3 coppie ci si deve fermare alla prima iterazione");
     }
 
-    // esito globale
     int bad = failures > 0 ? 1 : 0, any_bad = 0;
     MPI_Allreduce(&bad, &any_bad, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     if (g_rank == 0) std::printf("\n%s\n", any_bad ? "TEST FALLITI" : "TUTTI I TEST OK");

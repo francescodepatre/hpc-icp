@@ -42,18 +42,6 @@ struct PointCloud {
     }
 };
 
-/*
-Example use:
-
-PointCloud cloud;
-
-cloud.x.push_back(1.0f);
-cloud.y.push_back(2.0f);
-cloud.z.push_back(3.0f);
-
-std::size_t n = cloud.size();  // n = 1
-*/
-
 #endif
 
 

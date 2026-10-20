@@ -4,8 +4,6 @@
 
 namespace {
 
-// Autovalori/autovettori di una matrice simmetrica 4x4 con il metodo di Jacobi ciclico.
-// Su ritorno A e' (quasi) diagonale, le colonne di V sono gli autovettori.
 void jacobi4(double A[4][4], double V[4][4]) {
     for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j) V[i][j] = (i == j) ? 1.0 : 0.0;
@@ -44,7 +42,7 @@ void jacobi4(double A[4][4], double V[4][4]) {
     }
 }
 
-}  // namespace
+} 
 
 bool kabsch_from_sums(const CorrSums& s, Rigid& out) {
     if (s.n < 3) return false;
@@ -55,7 +53,6 @@ bool kabsch_from_sums(const CorrSums& s, Rigid& out) {
         cq[a] = s.sq[a] / s.n;
     }
 
-    // Matrice di covarianza incrociata centrata: S_ab = sum (p_a - cp_a)(q_b - cq_b)
     double S[3][3];
     for (int a = 0; a < 3; ++a)
         for (int b = 0; b < 3; ++b) S[a][b] = s.spq[3 * a + b] - s.n * cp[a] * cq[b];
@@ -64,7 +61,6 @@ bool kabsch_from_sums(const CorrSums& s, Rigid& out) {
     const double Syx = S[1][0], Syy = S[1][1], Syz = S[1][2];
     const double Szx = S[2][0], Szy = S[2][1], Szz = S[2][2];
 
-    // Matrice N di Horn: il quaternione ottimo e' l'autovettore del suo autovalore massimo
     double N[4][4] = {
         {Sxx + Syy + Szz, Syz - Szy,        Szx - Sxz,         Sxy - Syx},
         {Syz - Szy,       Sxx - Syy - Szz,  Sxy + Syx,         Szx + Sxz},

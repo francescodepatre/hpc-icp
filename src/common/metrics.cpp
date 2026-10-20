@@ -4,8 +4,7 @@
 #include <cmath>
 
 double rotation_error_deg(const double Ra[9], const double Rb[9]) {
-    // Rrel = Ra^T Rb; angolo = atan2(|parte antisimmetrica|, (trace - 1) / 2).
-    // Piu' accurato di acos() per angoli molto piccoli.
+    
     double Rr[9];
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)

@@ -10,19 +10,17 @@ IcpResult icp_seq(const PointCloud& src, const PointCloud& tgt, const IcpParams&
     Timer total;
     Timer t;
 
-    // Griglia sul target, con lato della cella = dmax
     Grid grid;
     t.tic();
     grid_build(tgt, p.dmax, grid);
     res.tm.grid = t.toc();
 
     const size_t n = src.size();
-    PointCloud moved;               // sorgente trasformata
+    PointCloud moved;               
     moved.resize(n);
-    std::vector<int> match(n);      // indice (nella griglia) del vicino, -1 se nessuno
+    std::vector<int> match(n);     
 
     for (int it = 0; it < p.iters; ++it) {
-        // --- apply: si parte sempre dalla sorgente ORIGINALE (niente deriva numerica)
         t.tic();
         for (size_t i = 0; i < n; ++i) {
             double o[3];
@@ -33,7 +31,6 @@ IcpResult icp_seq(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         }
         res.tm.apply += t.toc();
 
-        // --- nn: ricerca dei vicini
         t.tic();
         double sum_d2 = 0;
         size_t valid = 0;
@@ -44,7 +41,6 @@ IcpResult icp_seq(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         }
         res.tm.nn += t.toc();
 
-        // --- reduce: somme sulle coppie valide
         t.tic();
         CorrSums s;
         for (size_t i = 0; i < n; ++i) {
@@ -54,12 +50,11 @@ IcpResult icp_seq(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         }
         res.tm.reduce += t.toc();
 
-        // --- solve: passo (R,t) e composizione con la T corrente
         t.tic();
         res.rmse.push_back(valid ? std::sqrt(sum_d2 / static_cast<double>(valid)) : 0.0);
         res.matches.push_back(valid);
         Rigid delta;
-        if (!kabsch_from_sums(s, delta)) {  // troppe poche coppie: ci si ferma
+        if (!kabsch_from_sums(s, delta)) {
             res.tm.solve += t.toc();
             break;
         }
