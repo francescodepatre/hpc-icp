@@ -61,38 +61,72 @@ target_include_directories(icp_common PUBLIC ${CMAKE_SOURCE_DIR}/src/common)
 
 # 1) Sequenziale
 if(EXISTS ${CMAKE_SOURCE_DIR}/src/seq/main.cpp)
-  add_executable(icp_seq src/seq/main.cpp)
-  target_link_libraries(icp_seq PRIVATE icp_common)
+    add_executable(icp_seq src/seq/main.cpp)
+    target_link_libraries(icp_seq PRIVATE
+        icp_common
+        stdc++fs
+    )
 endif()
 
 # 2) OpenMP
 if(OpenMP_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/src/omp/main.cpp)
   file(GLOB OMP_SRC CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/omp/*.cpp)
   add_executable(icp_omp ${OMP_SRC})
-  target_link_libraries(icp_omp PRIVATE icp_common OpenMP::OpenMP_CXX)
+  target_link_libraries(icp_omp PRIVATE
+    icp_common
+    OpenMP::OpenMP_CXX
+    stdc++fs
+  )
 endif()
 
 
-# 3) MPI (e ibrido MPI+OpenMP se OpenMP e' disponibile)
+
+# 3) MPI (e ibrido MPI+OpenMP se OpenMP è disponibile)
 if(MPI_CXX_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/src/mpi/main.cpp)
-  add_executable(icp_mpi src/mpi/main.cpp src/mpi/icp_mpi.cpp)
-  target_include_directories(icp_mpi PRIVATE ${CMAKE_SOURCE_DIR}/src/mpi)
-  target_link_libraries(icp_mpi PRIVATE icp_common MPI::MPI_CXX)
-  if(OpenMP_CXX_FOUND)
-    # -fopenmp attiva i pragma in icp_mpi.cpp: con --threads T si ottiene la versione ibrida
-    target_link_libraries(icp_mpi PRIVATE OpenMP::OpenMP_CXX)
-  endif()
+    add_executable(icp_mpi
+        src/mpi/main.cpp
+        src/mpi/icp_mpi.cpp
+    )
+
+    target_include_directories(icp_mpi PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/mpi
+    )
+
+    target_link_libraries(icp_mpi PRIVATE
+        icp_common
+        MPI::MPI_CXX
+        stdc++fs
+    )
+
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(icp_mpi PRIVATE
+            OpenMP::OpenMP_CXX
+        )
+    endif()
 endif()
+
 
 # 4) CUDA
 if(HAVE_CUDA AND EXISTS ${CMAKE_SOURCE_DIR}/src/cuda/main.cu)
-  file(GLOB CUDA_SRC CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/cuda/*.cu)
+  file(GLOB CUDA_SRC CONFIGURE_DEPENDS
+       ${CMAKE_SOURCE_DIR}/src/cuda/*.cu)
+
   add_executable(icp_cuda ${CUDA_SRC})
-  target_link_libraries(icp_cuda PRIVATE icp_common)
-  target_include_directories(icp_cuda PRIVATE ${CMAKE_SOURCE_DIR}/src/cuda)
-  set_target_properties(icp_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION OFF)
-  # per profilare con Nsight Compute aggiungi: target_compile_options(icp_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
+
+  target_link_libraries(icp_cuda PRIVATE
+    icp_common
+    stdc++fs
+  )
+
+  target_include_directories(icp_cuda PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/cuda
+  )
+
+  set_target_properties(icp_cuda PROPERTIES
+    CUDA_SEPARABLE_COMPILATION OFF
+  )
 endif()
+
 
 # 5) Strumenti e test (opzionali)
 if(EXISTS ${CMAKE_SOURCE_DIR}/src/tools/make_pair.cpp)

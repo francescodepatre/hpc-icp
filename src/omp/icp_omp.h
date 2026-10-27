@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef ICP_OMP_H
+#define ICP_OMP_H
+
 #include "grid.h"
 #include "icp.h"
 #include "kabsch.h"
@@ -16,3 +19,5 @@ IcpResult icp_omp(
     const IcpParams& p,
     const Rigid& init = rigid_identity()
 );
+
+#endif

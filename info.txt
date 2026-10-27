@@ -1,0 +1,12 @@
+omp
+
+[francesco.depatre@ui01 build]$ hostname; lscpu | grep "Model name"
+ui01.hpc.unipr.it
+Model name:            Intel(R) Xeon(R) Gold 6238R CPU @ 2.20GHz
+[francesco.depatre@ui01 build]$ 
+
+
+salloc --nodes=1 --nodelist=wn83 --ntasks=4 --cpus-per-task=2 --hint=nomultithread --partition=cpu --qos=cpu --time=02:00:00
+
+
+salloc --nodes=1 --nodelist=wn83 --ntasks=4 --cpus-per-task=2 --hint=nomultithread --partition=cpu --qos=cpu --time=02:00:00

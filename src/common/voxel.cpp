@@ -9,7 +9,7 @@
 PointCloud voxel_downsample(const PointCloud& in, float voxel) {
     const size_t n = in.size();
     if (n == 0 || voxel <= 0.f) return in;
-    if (n >= (1ull << 32)) throw std::runtime_error("voxel_downsample: troppi punti");
+    if (n >= (1ull << 32)) throw std::runtime_error("voxel_downsample: too many points");
 
     float minx = in.x[0], miny = in.y[0], minz = in.z[0];
     for (size_t i = 1; i < n; ++i) {
@@ -28,7 +28,7 @@ PointCloud voxel_downsample(const PointCloud& in, float voxel) {
         uint64_t iy = static_cast<uint64_t>(std::floor((in.y[i] - miny) * inv));
         uint64_t iz = static_cast<uint64_t>(std::floor((in.z[i] - minz) * inv));
         if (ix >= LIM || iy >= LIM || iz >= LIM)
-            throw std::runtime_error("voxel_downsample: voxel troppo piccolo rispetto all'estensione");
+            throw std::runtime_error("voxel_downsample: voxel too small relative to the extent");
         items[i] = {(ix << 42) | (iy << 21) | iz, static_cast<uint32_t>(i)};
     }
 

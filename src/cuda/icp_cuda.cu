@@ -16,7 +16,7 @@
         cudaError_t e_ = (call);                                                              \
         if (e_ != cudaSuccess)                                                                \
             throw std::runtime_error(std::string("CUDA: ") + cudaGetErrorString(e_) + " (" + \
-                                     #call + ", riga " + std::to_string(__LINE__) + ")");     \
+                                     #call + ", line " + std::to_string(__LINE__) + ")");     \
     } while (0)
 
 namespace {
@@ -144,7 +144,7 @@ __global__ void reduce_kernel(int n, const float4* __restrict__ moved, const int
 
 void check_block(int b, const char* name) {
     if (b < 32 || b > 1024 || b % 32 != 0)
-        throw std::runtime_error(std::string(name) + " deve essere un multiplo di 32 tra 32 e 1024");
+        throw std::runtime_error(std::string(name) + " must be a multiple of 32 between 32 and 1024");
 }
 
 std::vector<float4> to_float4(const PointCloud& pc) {
@@ -159,29 +159,29 @@ std::vector<float4> to_float4(const Grid& g) {
     return v;
 }
 
-}  
+}
 
 IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams& p, const Rigid& init,
                    const CudaOptions& opt, CudaInfo* info) {
     if (src.empty()) {
-        throw std::runtime_error("icp_cuda: sorgente vuota");
+        throw std::runtime_error("icp_cuda: empty source");
     }
 
     if (tgt.empty()) {
-        throw std::runtime_error("icp_cuda: target vuoto");
+        throw std::runtime_error("icp_cuda: empty target");
     }
 
     if (src.size() >= static_cast<size_t>(INT_MAX) ||
         tgt.size() >= static_cast<size_t>(INT_MAX)) {
-        throw std::runtime_error("icp_cuda: troppi punti");
+        throw std::runtime_error("icp_cuda: too many points");
     }
 
     if (p.iters <= 0) {
-        throw std::runtime_error("icp_cuda: il numero di iterazioni deve essere positivo");
+        throw std::runtime_error("icp_cuda: the number of iterations must be positive");
     }
 
     if (!(p.dmax > 0.0f) || !std::isfinite(p.dmax)) {
-        throw std::runtime_error("icp_cuda: dmax deve essere positivo e finito");
+        throw std::runtime_error("icp_cuda: dmax must be positive and finite");
     }
 
     check_block(opt.block_nn, "block_nn");

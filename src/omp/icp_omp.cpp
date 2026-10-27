@@ -16,7 +16,7 @@
 
 using Mat4 = std::array<double, 16>;
 
-// Crea una matrice identità 4x4.
+
 static Mat4 identity4()
 {
     Mat4 M{};
@@ -30,8 +30,6 @@ static Mat4 identity4()
 }
 
 
-// Converte i 12 valori di una matrice KITTI 3x4
-// in una matrice omogenea 4x4.
 static Mat4 to4x4(const double m[12])
 {
     Mat4 M = identity4();
@@ -46,9 +44,6 @@ static Mat4 to4x4(const double m[12])
 }
 
 
-// Legge tutte le pose dal file KITTI poses/XX.txt.
-// Ogni riga contiene 12 valori, corrispondenti
-// a una matrice di trasformazione 3x4.
 static bool load_kitti_poses(
     const std::string& path,
     std::vector<Mat4>& poses)
@@ -56,7 +51,7 @@ static bool load_kitti_poses(
     std::ifstream f(path);
 
     if (!f.is_open()) {
-        std::cerr << "Impossibile aprire il file delle pose: "
+        std::cerr << "Unable to open poses file: "
                   << path << '\n';
         return false;
     }
@@ -76,7 +71,7 @@ static bool load_kitti_poses(
 
         for (int i = 0; i < 12; ++i) {
             if (!(iss >> m[i])) {
-                std::cerr << "Riga non valida nel file delle pose: "
+                std::cerr << "Invalid line in poses file: "
                           << path << '\n';
                 return false;
             }
@@ -89,8 +84,6 @@ static bool load_kitti_poses(
 }
 
 
-// Legge la matrice Tr dal file calib.txt di KITTI.
-// Gli altri parametri di calibrazione vengono ignorati.
 static bool load_kitti_calib(
     const std::string& path,
     Mat4& Tr)
@@ -98,7 +91,7 @@ static bool load_kitti_calib(
     std::ifstream f(path);
 
     if (!f.is_open()) {
-        std::cerr << "Impossibile aprire la calibrazione: "
+        std::cerr << "Unable to open calibration file: "
                   << path << '\n';
         return false;
     }
@@ -116,7 +109,7 @@ static bool load_kitti_calib(
 
         for (int i = 0; i < 12; ++i) {
             if (!(iss >> m[i])) {
-                std::cerr << "Matrice Tr non valida in: "
+                std::cerr << "Invalid Tr matrix in: "
                           << path << '\n';
                 return false;
             }
@@ -127,14 +120,13 @@ static bool load_kitti_calib(
         return true;
     }
 
-    std::cerr << "Matrice Tr non trovata in: "
+    std::cerr << "Tr matrix not found in: "
               << path << '\n';
 
     return false;
 }
 
 
-// Moltiplicazione di due matrici 4x4.
 static Mat4 multiply4(const Mat4& A, const Mat4& B)
 {
     Mat4 C{};
@@ -152,21 +144,18 @@ static Mat4 multiply4(const Mat4& A, const Mat4& B)
 }
 
 
-// Inversa di una trasformazione rigida:
-// [R t]^-1 = [R^T  -R^T t]
-// [0 1]      [0       1  ]
 static Mat4 inverse_rigid4(const Mat4& T)
 {
     Mat4 inv = identity4();
 
-    // Trasposta della rotazione.
+
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             inv[4 * i + j] = T[4 * j + i];
         }
     }
 
-    // Nuova traslazione: -R^T * t.
+
     for (int i = 0; i < 3; ++i) {
         inv[4 * i + 3] = 0.0;
 
@@ -180,8 +169,6 @@ static Mat4 inverse_rigid4(const Mat4& T)
 }
 
 
-// Converte una matrice 4x4 nella struttura Rigid
-// già utilizzata dal tuo ICP.
 static Rigid to_rigid(const Mat4& M)
 {
     Rigid T{};
@@ -200,8 +187,8 @@ static Rigid to_rigid(const Mat4& M)
 
 namespace {
 
-const long long MAX_CELLS = 400000000LL;               
-const size_t MAX_HIST_ENTRIES = 50ull * 1000 * 1000;  
+const long long MAX_CELLS = 400000000LL;
+const size_t MAX_HIST_ENTRIES = 50ull * 1000 * 1000;
 
 inline int cell_coord(float v, float minv, float inv) {
     return static_cast<int>(std::floor((v - minv) * inv));
@@ -221,9 +208,9 @@ void merge_sums(CorrSums& a, const CorrSums& b) {
 
 void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
     const size_t n = pts.size();
-    if (n == 0) throw std::runtime_error("grid_build_omp: nuvola vuota");
+    if (n == 0) throw std::runtime_error("grid_build_omp: empty cloud");
     if (cell <= 0.f) throw std::runtime_error("grid_build_omp: cell <= 0");
-    if (n >= 2147483647ull) throw std::runtime_error("grid_build_omp: troppi punti per indici int");
+    if (n >= 2147483647ull) throw std::runtime_error("grid_build_omp: too many points for int indices");
 
     float minx = pts.x[0], miny = pts.y[0], minz = pts.z[0];
     float maxx = minx, maxy = miny, maxz = minz;
@@ -244,7 +231,7 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
     const long long ncells = static_cast<long long>(g.nx) * g.ny * g.nz;
     if (ncells > MAX_CELLS)
         throw std::runtime_error("grid_build_omp: " + std::to_string(ncells) +
-                                 " celle: troppe. Aumenta il lato della cella o fai downsampling.");
+                                 " cells: too many. Increase the cell size or downsample.");
 
     const int maxT = omp_get_max_threads();
     if (static_cast<size_t>(maxT) * static_cast<size_t>(ncells) > MAX_HIST_ENTRIES) {
@@ -253,7 +240,7 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
     }
 
     std::vector<int> cid(n);
-    std::vector<int> cnt(static_cast<size_t>(maxT) * static_cast<size_t>(ncells), 0);  
+    std::vector<int> cnt(static_cast<size_t>(maxT) * static_cast<size_t>(ncells), 0);
     g.cellStart.assign(static_cast<size_t>(ncells) + 1, 0);
     g.x.resize(n); g.y.resize(n); g.z.resize(n); g.orig.resize(n);
 
@@ -285,11 +272,11 @@ void grid_build_omp(const PointCloud& pts, float cell, Grid& g) {
                 run += v;
             }
             g.cellStart[static_cast<size_t>(c) + 1] = run;
-        }  
+        }
 #pragma omp single
         {
             for (long long c = 0; c < ncells; ++c) g.cellStart[c + 1] += g.cellStart[c];
-        }  
+        }
         for (size_t i = lo; i < hi; ++i) {
             const int c = cid[i];
             const int pos = g.cellStart[c] + mine[c]++;
@@ -320,7 +307,7 @@ IcpResult icp_omp(const PointCloud& src, const PointCloud& tgt, const IcpParams&
     std::vector<PaddedSums> parts(static_cast<size_t>(maxT));
 
     for (int it = 0; it < p.iters; ++it) {
-        
+
         t.tic();
         {
             const Rigid T = res.T;

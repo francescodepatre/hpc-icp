@@ -15,7 +15,7 @@ static int failures = 0;
     do {                                              \
         if (!(cond)) {                                \
             ++failures;                               \
-            std::printf("  FALLITO: %s  -> ", #cond); \
+            std::printf("  FAILED: %s  -> ", #cond); \
             std::printf(__VA_ARGS__);                 \
             std::printf("\n");                        \
         }                                             \
@@ -56,9 +56,9 @@ static bool same_grid(const Grid& a, const Grid& b) {
 int main() {
     const int thread_counts[] = {1, 2, 3, 4, 7, 16};
 
-    std::printf("[griglia OpenMP == griglia sequenziale]\n");
+    std::printf("[OpenMP grid == sequential grid]\n");
     PointCloud cloud = make_surface(60000, 1);
-    {   // aggiungo un cluster molto denso: celle con carichi molto diversi
+    {  
         std::mt19937 rng(9);
         std::normal_distribution<float> g(0.2f, 0.02f);
         for (int i = 0; i < 20000; ++i) cloud.push_back(g(rng), g(rng), g(rng));
@@ -70,8 +70,8 @@ int main() {
         Grid go;
         grid_build_omp(cloud, 0.1f, go);
         const bool ok = same_grid(gs, go);
-        std::printf("  %2d thread: %s\n", T, ok ? "identica" : "DIVERSA");
-        CHECK(ok, "griglia diversa con %d thread", T);
+        std::printf("  %2d thread: %s\n", T, ok ? "same" : "DIFFERENT");
+        CHECK(ok, "different grid with %d thread", T);
     }
 
     std::printf("[ICP OpenMP vs sequenziale]\n");
@@ -97,13 +97,13 @@ int main() {
         double rot, tr;
         pose_error(ro.T, rs.T, rot, tr);
         const double drmse = std::fabs(ro.rmse.back() - rs.rmse.back());
-        std::printf("  %2d thread  : %.3f s | diff da seq: rot %.2e gradi, trasl %.2e, rmse %.2e, coppie %zu vs %zu\n",
+        std::printf("  %2d thread  : %.3f s | diff seq: rot %.2e deg, trasl %.2e, rmse %.2e, pairs %zu vs %zu\n",
                     T, ro.tm.total, rot, tr, drmse, ro.matches.back(), rs.matches.back());
-        CHECK(rot < 1e-6 && tr < 1e-6, "T diversa dalla sequenziale con %d thread", T);
-        CHECK(drmse < 1e-6, "RMSE diverso con %d thread", T);
-        CHECK(ro.matches.back() == rs.matches.back(), "numero di coppie diverso con %d thread", T);
+        CHECK(rot < 1e-6 && tr < 1e-6, "T fifferent from sequential with %d thread", T);
+        CHECK(drmse < 1e-6, "RMSE different with %d thread", T);
+        CHECK(ro.matches.back() == rs.matches.back(), "different pairs number with %d thread", T);
     }
 
-    std::printf("\n%s (%d controlli falliti)\n", failures ? "TEST FALLITI" : "TUTTI I TEST OK", failures);
+    std::printf("\n%s (%d failed checks)\n", failures ? "FAILED TESTS" : "ALL TEST OK", failures);
     return failures ? 1 : 0;
 }

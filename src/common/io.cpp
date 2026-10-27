@@ -15,7 +15,7 @@ namespace {
         char kind = 'f';
         bool is_list = false;
     };
-    
+
     struct Element{
         std::string name;
         std::size_t count = 0;
@@ -23,89 +23,89 @@ namespace {
     };
 
     bool parse_type(const std::string& t, int& size, char& kind) {
-        if (t == "float" || t == "float32") { 
-            size = 4; 
-            kind = 'f'; 
-            return true; 
+        if (t == "float" || t == "float32") {
+            size = 4;
+            kind = 'f';
+            return true;
         }
-        if (t == "double" || t == "float64") { 
-            size = 8; 
-            kind = 'f'; 
-            return true; 
+        if (t == "double" || t == "float64") {
+            size = 8;
+            kind = 'f';
+            return true;
         }
-        if (t == "char" || t == "int8") { 
-            size = 1; 
-            kind = 'i'; 
-            return true; 
+        if (t == "char" || t == "int8") {
+            size = 1;
+            kind = 'i';
+            return true;
         }
-        if (t == "uchar" || t == "uint8") { 
-            size = 1; 
-            kind = 'u'; 
-            return true; 
+        if (t == "uchar" || t == "uint8") {
+            size = 1;
+            kind = 'u';
+            return true;
         }
-        if (t == "short" || t == "int16") { 
-            size = 2; 
-            kind = 'i'; 
-            return true; 
+        if (t == "short" || t == "int16") {
+            size = 2;
+            kind = 'i';
+            return true;
         }
-        if (t == "ushort" || t == "uint16") { 
-            size = 2; 
-            kind = 'u'; 
-            return true; 
+        if (t == "ushort" || t == "uint16") {
+            size = 2;
+            kind = 'u';
+            return true;
         }
-        if (t == "int" || t == "int32") { 
-            size = 4; 
-            kind = 'i'; 
-            return true; 
+        if (t == "int" || t == "int32") {
+            size = 4;
+            kind = 'i';
+            return true;
         }
-        if (t == "uint" || t == "uint32") { 
-            size = 4; 
-            kind = 'u'; 
-            return true; 
+        if (t == "uint" || t == "uint32") {
+            size = 4;
+            kind = 'u';
+            return true;
         }
         return false;
     }
 
     double read_scalar(const unsigned char* p, int size, char kind) {
         if (kind == 'f') {
-            if (size == 4) { 
-                float v; std::memcpy(&v, p, 4); 
-                return v; 
+            if (size == 4) {
+                float v; std::memcpy(&v, p, 4);
+                return v;
             }
-            double v; std::memcpy(&v, p, 8); 
+            double v; std::memcpy(&v, p, 8);
             return v;
         }
         if (kind == 'i') {
-            if (size == 1) { 
-                int8_t v; 
-                std::memcpy(&v, p, 1); 
+            if (size == 1) {
+                int8_t v;
+                std::memcpy(&v, p, 1);
                 return v; }
-            if (size == 2) { 
-                int16_t v; 
-                std::memcpy(&v, p, 2); 
+            if (size == 2) {
+                int16_t v;
+                std::memcpy(&v, p, 2);
                 return v; }
-            int32_t v; 
-            std::memcpy(&v, p, 4); 
+            int32_t v;
+            std::memcpy(&v, p, 4);
             return v;
         }
-        if (size == 1) { 
-            uint8_t v; 
-            std::memcpy(&v, p, 1); 
+        if (size == 1) {
+            uint8_t v;
+            std::memcpy(&v, p, 1);
             return v; }
-        if (size == 2) { 
-            uint16_t v; 
-            std::memcpy(&v, p, 2); 
+        if (size == 2) {
+            uint16_t v;
+            std::memcpy(&v, p, 2);
             return v; }
-        uint32_t v; 
-        std::memcpy(&v, p, 4); 
+        uint32_t v;
+        std::memcpy(&v, p, 4);
         return v;
     }
 
     void strip_cr(std::string& s) {
-        if (!s.empty() && s.back() == '\r') 
+        if (!s.empty() && s.back() == '\r')
             s.pop_back();
     }
-    
+
 }
 
 
@@ -116,17 +116,17 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
     };
 
     std::ifstream f(path, std::ios::binary);
-    if (!f) 
-        return fail("impossibile aprire il file");
+    if (!f)
+        return fail("unable to open file");
 
     std::string line;
     std::getline(f, line);
     strip_cr(line);
-    
-    if (line != "ply") 
-        return fail("non e' un file PLY");
 
-    int fmt = -1;  
+    if (line != "ply")
+        return fail("not a PLY file");
+
+    int fmt = -1;
     std::vector<Element> elems;
     bool header_end = false;
 
@@ -140,13 +140,13 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
             ss >> v;
             if (v == "ascii") fmt = 0;
             else if (v == "binary_little_endian") fmt = 1;
-            else return fail("formato non supportato: " + v);
+            else return fail("unsupported format: " + v);
         } else if (kw == "element") {
             Element e;
             ss >> e.name >> e.count;
             elems.push_back(e);
         } else if (kw == "property") {
-            if (elems.empty()) return fail("property prima di element");
+            if (elems.empty()) return fail("property before element");
             Prop p;
             std::string t;
             ss >> t;
@@ -155,7 +155,7 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
                 ss >> ct >> it >> p.name;
                 p.is_list = true;
             } else {
-                if (!parse_type(t, p.size, p.kind)) return fail("tipo sconosciuto: " + t);
+                if (!parse_type(t, p.size, p.kind)) return fail("unknown type: " + t);
                 ss >> p.name;
             }
             elems.back().props.push_back(p);
@@ -164,8 +164,8 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
             break;
         }
     }
-    if (!header_end || fmt < 0) 
-        return fail("header PLY incompleto");
+    if (!header_end || fmt < 0)
+        return fail("incomplete PLY header");
 
     pc.clear();
 
@@ -178,8 +178,8 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
         }
 
         if (e.name != "vertex") {
-            if (has_list) 
-                return fail("elemento con liste prima dei vertici: non supportato");
+            if (has_list)
+                return fail("element with lists before vertices: not supported");
             if (fmt == 0) {
                 std::string tmp;
                 for (size_t i = 0; i < e.count; ++i) std::getline(f, tmp);
@@ -189,8 +189,8 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
             continue;
         }
 
-        if (has_list) 
-            return fail("liste nei vertici: non supportato");
+        if (has_list)
+            return fail("lists in vertices: not supported");
 
         int ix = -1, iy = -1, iz = -1;
         std::vector<size_t> off(e.props.size());
@@ -202,7 +202,7 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
             if (e.props[k].name == "y") iy = static_cast<int>(k);
             if (e.props[k].name == "z") iz = static_cast<int>(k);
         }
-        if (ix < 0 || iy < 0 || iz < 0) return fail("i vertici non hanno x, y, z");
+        if (ix < 0 || iy < 0 || iz < 0) return fail("vertices lack x, y, z");
 
         pc.reserve(e.count);
 
@@ -212,7 +212,7 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
             for (size_t done = 0; done < e.count;) {
                 size_t m = std::min(CH, e.count - done);
                 f.read(reinterpret_cast<char*>(buf.data()), static_cast<std::streamsize>(row * m));
-                if (!f) return fail("file troncato");
+                if (!f) return fail("truncated file");
                 for (size_t r = 0; r < m; ++r) {
                     const unsigned char* b = buf.data() + r * row;
                     float x = static_cast<float>(read_scalar(b + off[ix], e.props[ix].size, e.props[ix].kind));
@@ -225,13 +225,13 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
         } else {
             std::string l;
             for (size_t i = 0; i < e.count; ++i) {
-                if (!std::getline(f, l)) return fail("file troncato");
+                if (!std::getline(f, l)) return fail("truncated file");
                 const char* s = l.c_str();
                 char* end = nullptr;
                 double v[3] = {0, 0, 0};
                 for (size_t k = 0; k < e.props.size(); ++k) {
                     double val = std::strtod(s, &end);
-                    if (end == s) return fail("riga ascii non valida");
+                    if (end == s) return fail("invalid ascii line");
                     s = end;
                     if (static_cast<int>(k) == ix) v[0] = val;
                     if (static_cast<int>(k) == iy) v[1] = val;
@@ -240,9 +240,9 @@ bool load_ply(const std::string& path, PointCloud& pc, std::string* err) {
                 pc.push_back(static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
             }
         }
-        return true;  
+        return true;
     }
-    return fail("nessun elemento 'vertex'");
+    return fail("no 'vertex' element");
 }
 
 bool load_kitti_bin(const std::string& path, PointCloud& pc, std::string* err) {
@@ -251,9 +251,9 @@ bool load_kitti_bin(const std::string& path, PointCloud& pc, std::string* err) {
         return false;
     };
     std::ifstream f(path, std::ios::binary | std::ios::ate);
-    if (!f) return fail("impossibile aprire il file");
+    if (!f) return fail("unable to open file");
     const std::streamoff bytes = f.tellg();
-    if (bytes < 0 || bytes % 16 != 0) return fail("dimensione non multipla di 16 byte");
+    if (bytes < 0 || bytes % 16 != 0) return fail("size is not a multiple of 16 bytes");
     const size_t n = static_cast<size_t>(bytes) / 16;
     f.seekg(0);
 
@@ -264,11 +264,11 @@ bool load_kitti_bin(const std::string& path, PointCloud& pc, std::string* err) {
     for (size_t done = 0; done < n;) {
         size_t m = std::min(CH, n - done);
         f.read(reinterpret_cast<char*>(buf.data()), static_cast<std::streamsize>(16 * m));
-        if (!f) return fail("file troncato");
+        if (!f) return fail("truncated file");
         for (size_t i = 0; i < m; ++i) pc.push_back(buf[4 * i], buf[4 * i + 1], buf[4 * i + 2]);
         done += m;
     }
-    return true;  
+    return true;
 }
 
 bool load_cloud(const std::string& path, PointCloud& pc, std::string* err) {
@@ -278,14 +278,14 @@ bool load_cloud(const std::string& path, PointCloud& pc, std::string* err) {
     };
     if (ends_with(".ply")) return load_ply(path, pc, err);
     if (ends_with(".bin")) return load_kitti_bin(path, pc, err);
-    if (err) *err = path + ": estensione non riconosciuta (usa .ply o .bin)";
+    if (err) *err = path + ": unrecognized extension (use .ply or .bin)";
     return false;
 }
 
 bool save_ply(const std::string& path, const PointCloud& pc, std::string* err) {
     std::ofstream f(path, std::ios::binary);
     if (!f) {
-        if (err) *err = path + ": impossibile scrivere il file";
+        if (err) *err = path + ": unable to write file";
         return false;
     }
     f << "ply\nformat binary_little_endian 1.0\n"

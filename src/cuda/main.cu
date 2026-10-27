@@ -11,12 +11,13 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
+#include <utility>
 #include "icp.h"
 #include "icp_cuda.h"
 #include "io.h"
 #include "metrics.h"
 #include "voxel.h"
+#include "fusion.h"
 
 namespace fs = std::filesystem;
 
@@ -51,14 +52,14 @@ static Mat4 multiply4(const Mat4& a, const Mat4& b) {
 static Mat4 inverse_rigid4(const Mat4& m) {
     Mat4 inv = identity4();
 
-    // Inversa della rotazione: R^T.
+
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             inv[4 * i + j] = m[4 * j + i];
         }
     }
 
-    // Traslazione inversa: -R^T t.
+
     for (int i = 0; i < 3; ++i) {
         inv[4 * i + 3] = 0.0;
 
@@ -92,7 +93,7 @@ static bool load_kitti_poses(
     std::ifstream f(path);
 
     if (!f) {
-        std::cerr << "Impossibile aprire le pose: "
+        std::cerr << "Unable to open poses file: "
                   << path << '\n';
         return false;
     }
@@ -112,7 +113,7 @@ static bool load_kitti_poses(
 
         for (double& x : v) {
             if (!(iss >> x)) {
-                std::cerr << "Riga delle pose non valida in "
+                std::cerr << "Invalid line in poses file "
                           << path << '\n';
                 return false;
             }
@@ -139,7 +140,7 @@ static bool load_kitti_calib(
     std::ifstream f(path);
 
     if (!f) {
-        std::cerr << "Impossibile aprire la calibrazione: "
+        std::cerr << "Unable to open calibration file: "
                   << path << '\n';
         return false;
     }
@@ -160,7 +161,7 @@ static bool load_kitti_calib(
 
         for (double& x : v) {
             if (!(iss >> x)) {
-                std::cerr << "Trasformazione Tr non valida in "
+                std::cerr << "Invalid Tr transform in "
                           << path << '\n';
                 return false;
             }
@@ -177,16 +178,13 @@ static bool load_kitti_calib(
         return true;
     }
 
-    std::cerr << "Trasformazione Tr non trovata in "
+    std::cerr << "Tr transform not found in "
               << path << '\n';
 
     return false;
 }
 
-// Pose KITTI: world <- camera.
-// Tr: camera <- Velodyne.
-// Il risultato è la trasformazione source -> target
-// espressa nel sistema di coordinate Velodyne.
+
 static Rigid compute_ground_truth(
     const std::vector<Mat4>& poses,
     const Mat4& Tr,
@@ -252,7 +250,7 @@ static std::vector<Sequence> discover_sequences(
 ) {
     std::vector<Sequence> sequences;
 
-    // Caso 1: è stata passata direttamente la directory velodyne.
+
     if (contains_bin(root)) {
         sequences.push_back({
             sequence_name(root),
@@ -262,7 +260,7 @@ static std::vector<Sequence> discover_sequences(
         return sequences;
     }
 
-    // Caso 2: è stata passata la directory della sequenza, ad esempio 00.
+
     const fs::path velodyne = root / "velodyne";
 
     if (contains_bin(velodyne)) {
@@ -274,7 +272,7 @@ static std::vector<Sequence> discover_sequences(
         return sequences;
     }
 
-    // Caso 3: è stata passata la root che contiene più sequenze.
+
     if (fs::is_directory(root)) {
         for (const auto& entry : fs::directory_iterator(root)) {
             if (!entry.is_directory()) {
@@ -311,7 +309,7 @@ static fs::path resolve_pose_path(
         return arg;
     }
 
-    // Supporta anche un argomento come poses/00 senza estensione.
+
     fs::path with_extension = arg;
     with_extension += ".txt";
 
@@ -319,7 +317,7 @@ static fs::path resolve_pose_path(
         return with_extension;
     }
 
-    // Altrimenti l'argomento è la directory poses.
+
     return arg / (sequence + ".txt");
 }
 
@@ -350,7 +348,7 @@ static size_t scan_index(const fs::path& p, size_t fallback) {
 
 static void print_usage(const char* program) {
     std::cerr
-        << "Uso:\n"
+        << "Usage:\n"
         << program
         << " <scans_dir> <results.csv> <poses_file_or_dir>"
         << " <calib_dir_or_sequence>"
@@ -358,7 +356,7 @@ static void print_usage(const char* program) {
         << " [--device N] [--block B]"
         << " [--block-nn B] [--block-other B]"
         << " [--out DIR]\n\n"
-        << "Esempio:\n"
+        << "Example:\n"
         << program
         << " ../data/data_odometry_velodyne/dataset/sequences/00/velodyne/"
         << " ../results/bench_cuda.csv"
@@ -385,12 +383,12 @@ int main(int argc, char** argv) {
     CudaOptions opt;
     std::string out_dir;
 
-    // Argomenti opzionali.
+
     for (int i = 5; i < argc; ++i) {
         const std::string a = argv[i];
 
         if (i + 1 >= argc) {
-            std::cerr << "Argomento senza valore: " << a << '\n';
+            std::cerr << "Argument without value: " << a << '\n';
             return 1;
         }
 
@@ -415,19 +413,19 @@ int main(int argc, char** argv) {
             } else if (a == "--out") {
                 out_dir = value;
             } else {
-                std::cerr << "Opzione sconosciuta: " << a << '\n';
+                std::cerr << "Unknown option: " << a << '\n';
                 return 1;
             }
         } catch (const std::exception&) {
-            std::cerr << "Valore non valido per " << a
+            std::cerr << "Invalid value for " << a
                       << ": " << value << '\n';
             return 1;
         }
     }
 
     if (prm.dmax <= 0.0f || prm.iters <= 0 || voxel < 0.0f) {
-        std::cerr << "Parametri non validi: dmax e iters devono essere "
-                     "positivi, voxel non negativo.\n";
+        std::cerr << "Invalid parameters: dmax and iters must be "
+                     "positive, voxel must be non-negative.\n";
         return 1;
     }
 
@@ -437,7 +435,7 @@ int main(int argc, char** argv) {
 
         if (sequences.empty()) {
             throw std::runtime_error(
-                "Nessuna scansione .bin trovata in " +
+                "No .bin scan found in " +
                 scans_root.string()
             );
         }
@@ -454,7 +452,7 @@ int main(int argc, char** argv) {
 
         if (!csv) {
             throw std::runtime_error(
-                "Impossibile creare il CSV: " + csv_path.string()
+                "Unable to create CSV: " + csv_path.string()
             );
         }
 
@@ -468,7 +466,7 @@ int main(int argc, char** argv) {
         size_t total_pairs = 0;
         size_t failed_pairs = 0;
 
-        std::cout << "Sequenze trovate: " << sequences.size() << '\n';
+        std::cout << "Sequences found: " << sequences.size() << '\n';
 
         for (const Sequence& seq : sequences) {
             const std::vector<fs::path> scans =
@@ -476,9 +474,14 @@ int main(int argc, char** argv) {
 
             if (scans.size() < 2) {
                 std::cerr << "[" << seq.name
-                          << "] Meno di due scansioni, salto.\n";
+                          << "] Fewer than two scans, skipping.\n";
                 continue;
             }
+
+
+            PointCloud fused_map;
+            Rigid global_pose = rigid_identity();
+            bool fusion_initialized = false;
 
             const fs::path pose_path =
                 resolve_pose_path(poses_arg, seq.name);
@@ -499,24 +502,50 @@ int main(int argc, char** argv) {
 
             if (!gt_available) {
                 throw std::runtime_error(
-                    "Impossibile caricare il ground truth per la sequenza " +
+                    "Unable to load ground truth for sequence " +
                     seq.name
                 );
             }
 
-            std::cout << "\nSequenza " << seq.name
-                      << ": " << scans.size() << " scansioni\n"
+            std::cout << "\nSequence " << seq.name
+                      << ": " << scans.size() << " scans\n"
                       << "  Pose: " << pose_path << '\n'
-                      << "  Calibrazione: " << calib_path << '\n';
+                      << "  Calibration: " << calib_path << '\n';
+
+
+            {
+                std::string err;
+                PointCloud first_scan;
+
+                if (!load_cloud(scans.front().string(), first_scan, &err)) {
+                    throw std::runtime_error(
+                        "Unable to load the first scan: " + err
+                    );
+                }
+
+                if (voxel > 0.0f) {
+                    first_scan = voxel_downsample(first_scan, voxel);
+                }
+
+                if (first_scan.empty()) {
+                    throw std::runtime_error(
+                        "The first scan is empty in sequence " + seq.name
+                    );
+                }
+
+                fused_map = std::move(first_scan);
+                global_pose = rigid_identity();
+                fusion_initialized = true;
+            }
 
             for (size_t i = 1; i < scans.size(); ++i) {
                 const size_t src_idx = scan_index(scans[i], i);
                 const size_t tgt_idx = scan_index(scans[i - 1], i - 1);
 
                 if (src_idx >= poses.size() || tgt_idx >= poses.size()) {
-                    std::cerr << "[" << seq.name << "] Coppia "
+                    std::cerr << "[" << seq.name << "] Pair "
                               << src_idx << " -> " << tgt_idx
-                              << ": indice fuori dal file delle pose, salto.\n";
+                              << ": index outside the poses file, skipping.\n";
                     ++failed_pairs;
                     continue;
                 }
@@ -530,14 +559,14 @@ int main(int argc, char** argv) {
                 Timer tio;
 
                 if (!load_cloud(scans[i].string(), src, &err)) {
-                    std::cerr << "Errore lettura sorgente: "
+                    std::cerr << "Error reading source: "
                               << err << '\n';
                     ++failed_pairs;
                     continue;
                 }
 
                 if (!load_cloud(scans[i - 1].string(), tgt, &err)) {
-                    std::cerr << "Errore lettura target: "
+                    std::cerr << "Error reading target: "
                               << err << '\n';
                     ++failed_pairs;
                     continue;
@@ -551,7 +580,7 @@ int main(int argc, char** argv) {
                 }
 
                 if (src.empty() || tgt.empty()) {
-                    std::cerr << "Nuvola vuota dopo il preprocessing, salto.\n";
+                    std::cerr << "Empty cloud after preprocessing, skipping.\n";
                     ++failed_pairs;
                     continue;
                 }
@@ -569,7 +598,7 @@ int main(int argc, char** argv) {
                         &ci
                     );
                 } catch (const std::exception& e) {
-                    std::cerr << "Errore CUDA: " << e.what() << '\n';
+                    std::cerr << "CUDA error: " << e.what() << '\n';
                     ++failed_pairs;
                     continue;
                 }
@@ -586,6 +615,45 @@ int main(int argc, char** argv) {
 
                 pose_error(r.T, gt, rot_err, trans_err);
 
+
+                const bool icp_valid =
+                !r.rmse.empty() &&
+                !r.matches.empty() &&
+                r.matches.back() >= 3 &&
+                std::isfinite(r.rmse.back()) &&
+                std::isfinite(rot_err) &&
+                std::isfinite(trans_err);
+
+                bool transform_valid = true;
+
+                for (double x : r.T.R) {
+                    if (!std::isfinite(x)) {
+                        transform_valid = false;
+                        break;
+                    }
+                }
+
+                for (double x : r.T.t) {
+                    if (!std::isfinite(x)) {
+                        transform_valid = false;
+                        break;
+                    }
+                }
+
+                if (fusion_initialized && icp_valid) {
+                    global_pose = compose_transforms(global_pose, r.T);
+
+                    append_transformed(fused_map, src, global_pose);
+
+                    if (voxel > 0.0f) {
+                        fused_map = voxel_downsample(fused_map, voxel);
+                    }
+                } else {
+                    std::cerr << "Invalid ICP registration: "
+                            << src_idx << " -> " << tgt_idx
+                            << ". Scan excluded from fusion.\n";
+                }
+
                 const IcpTimings& tm = r.tm;
 
                 const size_t actual_iters = r.rmse.size();
@@ -597,19 +665,19 @@ int main(int argc, char** argv) {
                     r.matches.empty() ? 0 : r.matches.back();
 
                 std::cout
-                    << "  Punti: " << src.size()
+                    << "  Points: " << src.size()
                     << " / " << tgt.size() << '\n'
-                    << "  Iterazioni completate: " << actual_iters
-                    << ", RMSE finale: " << last_rmse
-                    << ", match validi: " << last_matches << '\n'
-                    << "  Errore rotazione: " << rot_err
-                    << " gradi, traslazione: " << trans_err << '\n'
-                    << "  Tempi (s): grid=" << tm.grid
+                    << "  Iterations completed: " << actual_iters
+                    << ", final RMSE: " << last_rmse
+                    << ", valid matches: " << last_matches << '\n'
+                    << "  Rotation error: " << rot_err
+                    << " degrees, translation: " << trans_err << '\n'
+                    << "  Timings (s): grid=" << tm.grid
                     << ", apply=" << tm.apply
                     << ", nn=" << tm.nn
                     << ", reduce=" << tm.reduce
                     << ", solve=" << tm.solve
-                    << ", totale=" << tm.total << '\n'
+                    << ", total=" << tm.total << '\n'
                     << "  I/O: " << t_io << " s\n";
 
                 csv
@@ -668,24 +736,48 @@ int main(int argc, char** argv) {
                         fs::path(out_dir) / filename.str();
 
                     if (!save_ply(output.string(), aligned, &err)) {
-                        std::cerr << "Errore salvataggio PLY: "
+                        std::cerr << "Error saving PLY: "
                                   << err << '\n';
                     }
                 }
 
                 ++total_pairs;
             }
+
+            if (fusion_initialized && !fused_map.empty()) {
+                const fs::path fused_dir = !out_dir.empty()
+                    ? fs::path(out_dir)
+                    : csv_path.parent_path();
+
+                if (!fused_dir.empty()) {
+                    fs::create_directories(fused_dir);
+                }
+
+                const fs::path fused_path =
+                    fused_dir / (seq.name + "_fused_cuda.ply");
+
+                std::string err;
+
+                if (!save_ply(fused_path.string(), fused_map, &err)) {
+                    std::cerr << "Error saving fused map: "
+                            << err << '\n';
+                } else {
+                    std::cout << "Fused map saved: " << fused_path
+                            << "\nPoints in map: " << fused_map.size()
+                            << '\n';
+                }
+            }
         }
 
-        std::cout << "\nElaborazione CUDA terminata.\n"
-                  << "Coppie elaborate: " << total_pairs << '\n'
-                  << "Coppie saltate o fallite: " << failed_pairs << '\n'
+        std::cout << "\nCUDA processing finished.\n"
+                  << "Pairs processed: " << total_pairs << '\n'
+                  << "Pairs skipped or failed: " << failed_pairs << '\n'
                   << "CSV: " << csv_path << '\n';
 
         return failed_pairs > 0 ? 1 : 0;
 
     } catch (const std::exception& e) {
-        std::cerr << "Errore: " << e.what() << '\n';
+        std::cerr << "Error: " << e.what() << '\n';
         return 1;
     }
 }

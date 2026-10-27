@@ -1,11 +1,11 @@
 #include "icp_mpi.h"
 
 #ifndef _OPENMP
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"  
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #endif
 
 #ifndef OMPI_SKIP_MPICXX
-#define OMPI_SKIP_MPICXX 1  
+#define OMPI_SKIP_MPICXX 1
 #endif
 #ifndef MPICH_SKIP_MPICXX
 #define MPICH_SKIP_MPICXX 1
@@ -55,13 +55,13 @@ void solve_step(const double* g, const Rigid& cur, double* msg) {
     const bool ok = kabsch_from_sums(s, delta);
     if (ok) next = rigid_compose(delta, cur);
 
-    msg[0] = ok ? 0.0 : 1.0; 
+    msg[0] = ok ? 0.0 : 1.0;
     for (int k = 0; k < 9; ++k) msg[1 + k] = next.R[k];
     for (int k = 0; k < 3; ++k) msg[10 + k] = next.t[k];
 }
 
 #ifdef _OPENMP
-struct alignas(64) PaddedSums {  
+struct alignas(64) PaddedSums {
     CorrSums s;
 };
 
@@ -102,7 +102,7 @@ CorrSums local_sums(const PointCloud& moved, const std::vector<int>& match, cons
 #endif
 }
 
-} 
+}
 
 void bcast_cloud(PointCloud& pc, int root) {
     int rank = 0;
@@ -110,7 +110,7 @@ void bcast_cloud(PointCloud& pc, int root) {
 
     unsigned long long n = pc.size();
     MPI_Bcast(&n, 1, MPI_UNSIGNED_LONG_LONG, root, MPI_COMM_WORLD);
-    if (n >= 2147483647ull) throw std::runtime_error("bcast_cloud: troppi punti per un conteggio int");
+    if (n >= 2147483647ull) throw std::runtime_error("bcast_cloud: too many points for an int count");
 
     if (rank != root) pc.resize(static_cast<size_t>(n));
     const int cnt = static_cast<int>(n);
@@ -125,9 +125,9 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (src.empty()) throw std::runtime_error("icp_mpi: nuvola sorgente vuota");
+    if (src.empty()) throw std::runtime_error("icp_mpi: empty source cloud");
 
-    MPI_Barrier(MPI_COMM_WORLD);  
+    MPI_Barrier(MPI_COMM_WORLD);
 
     IcpResult res;
     res.T = init;
@@ -152,7 +152,7 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
         nloc = (n > rank) ? (n - rank + size - 1) / size : 0;
     }
 
-    PointCloud moved;                 
+    PointCloud moved;
     moved.resize(static_cast<size_t>(nloc));
     std::vector<int> match(static_cast<size_t>(nloc), -1);
 
@@ -213,7 +213,7 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
                 solve_step(gbuf, res.T, msg);
                 res.tm.solve += t.toc();
             }
-            
+
             t.tic();
             MPI_Bcast(msg, NMSG, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             t_comm += t.toc();
@@ -221,7 +221,7 @@ IcpResult icp_mpi(const PointCloud& src, const PointCloud& tgt, const IcpParams&
 
         res.rmse.push_back(msg[13]);
         res.matches.push_back(static_cast<size_t>(msg[14]));
-        if (msg[0] != 0.0) break;  
+        if (msg[0] != 0.0) break;
         for (int k = 0; k < 9; ++k) res.T.R[k] = msg[1 + k];
         for (int k = 0; k < 3; ++k) res.T.t[k] = msg[10 + k];
     }

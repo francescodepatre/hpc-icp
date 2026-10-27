@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef ICP_CUDA_H
+#define ICP_CUDA_H
+
 #include <string>
 
 #include "grid.h"
@@ -23,3 +26,5 @@ struct CudaInfo {
 IcpResult icp_cuda(const PointCloud& src, const PointCloud& tgt, const IcpParams& p,
                    const Rigid& init = rigid_identity(), const CudaOptions& opt = CudaOptions(),
                    CudaInfo* info = nullptr);
+
+#endif

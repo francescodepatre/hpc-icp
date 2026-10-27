@@ -6,18 +6,18 @@
 #include <string>
 
 namespace {
-const long long MAX_CELLS = 400000000LL;  // safety limit on memory (~1.6 GB di int)
+const long long MAX_CELLS = 400000000LL;
 
 inline int cell_coord(float v, float minv, float inv) {
     return static_cast<int>(std::floor((v - minv) * inv));
 }
-} 
+}
 
 void grid_build(const PointCloud& pts, float cell, Grid& g) {
     const size_t n = pts.size();
-    if (n == 0) throw std::runtime_error("grid_build: nuvola vuota");
+    if (n == 0) throw std::runtime_error("grid_build: empty cloud");
     if (cell <= 0.f) throw std::runtime_error("grid_build: cell <= 0");
-    if (n >= 2147483647ull) throw std::runtime_error("grid_build: troppi punti per indici int");
+    if (n >= 2147483647ull) throw std::runtime_error("grid_build: too many points for int indices");
 
     float maxx = pts.x[0], maxy = pts.y[0], maxz = pts.z[0];
     g.minx = pts.x[0]; g.miny = pts.y[0]; g.minz = pts.z[0];
@@ -36,7 +36,7 @@ void grid_build(const PointCloud& pts, float cell, Grid& g) {
     const long long ncells = static_cast<long long>(g.nx) * g.ny * g.nz;
     if (ncells > MAX_CELLS)
         throw std::runtime_error("grid_build: " + std::to_string(ncells) +
-                                 " celle: troppe. Aumenta il lato della cella o fai downsampling.");
+                                 " cells: too many. Increase the cell size or downsample.");
 
     std::vector<int> cid(n);
     g.cellStart.assign(static_cast<size_t>(ncells) + 1, 0);

@@ -60,9 +60,8 @@ int main(int argc, char** argv) {
     int size = 1;
     MPI_Comm_rank(MPI_COMM_WORLD, &g_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    if (g_rank == 0) std::printf("test_mpi con %d rank\n", size);
+    if (g_rank == 0) std::printf("test_mpi with %d rank\n", size);
 
-    // dati sintetici identici su tutti i rank
     PointCloud tgt = make_surface(8000, 11), base = make_surface(8000, 12), src;
     Rigid G = make_rigid(1, 2, 3, 6.0, 0.05, -0.03, 0.02), Gi = rigid_inverse(G);
     std::mt19937 rng(21);
@@ -97,12 +96,8 @@ int main(int argc, char** argv) {
             MPI_Allreduce(&loc, &tot, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
 
             if (g_rank == 0)
-                std::printf("  %-6s %-11s: diff da seq rot %.2e gradi, trasl %.2e, rmse %.2e, coppie %zu vs %zu, "
-                            "punti %llu/%zu\n",
-                            pa == Partition::Block ? "block" : "cyclic",
-                            co == Collective::ReduceBcast ? "reduce+bcast" : "allreduce", rot, tr, drmse,
-                            r.matches.back(), ref.matches.back(), tot, src.size());
-            CHECK(rot < 1e-6 && tr < 1e-6, "T diversa dalla sequenziale");
+                std::printf("  %-6s %-11s: diff from seq rot %.2e deg, trasl %.2e, rmse %.2e, coppie %zu vs %zu, " "points %llu/%zu\n", pa == Partition::Block ? "block" : "cyclic", co == Collective::ReduceBcast ? "reduce+bcast" : "allreduce", rot, tr, drmse, r.matches.back(), ref.matches.back(), tot, src.size());
+            CHECK(rot < 1e-6 && tr < 1e-6, "T different from sequential");
             CHECK(drmse < 1e-6, "RMSE diverso");
             CHECK(r.matches.back() == ref.matches.back(), "numero di coppie diverso");
             CHECK(tot == src.size(), "i punti assegnati non coprono la sorgente");
@@ -120,8 +115,8 @@ int main(int argc, char** argv) {
         for (int k = 0; k < 12; ++k) same = same && (buf[k] == root[k]);
         int s = same ? 0 : 1, any = 0;
         MPI_Allreduce(&s, &any, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        if (g_rank == 0) std::printf("[T identico su tutti i rank (reduce+bcast)]: %s\n", any ? "NO" : "si");
-        CHECK(!any, "T diverso tra i rank");
+        if (g_rank == 0) std::printf("[T same on all ranks (reduce+bcast)]: %s\n", any ? "NO" : "yes");
+        CHECK(!any, "T different in ranks");
     }
 
     {
@@ -133,13 +128,13 @@ int main(int argc, char** argv) {
         MpiOptions opt;
         opt.partition = Partition::Cyclic;
         IcpResult r = icp_mpi(tiny, tgt, p2, rigid_identity(), opt);
-        if (g_rank == 0) std::printf("[2 punti sorgente su %d rank]: ok, iterazioni eseguite %zu\n", size, r.rmse.size());
-        CHECK(r.rmse.size() == 1, "con meno di 3 coppie ci si deve fermare alla prima iterazione");
+        if (g_rank == 0) std::printf("[2 source points on %d rank]: ok, #iterations %zu\n", size, r.rmse.size());
+        CHECK(r.rmse.size() == 1, "less than 3 pairs -> stop at first iter");
     }
 
     int bad = failures > 0 ? 1 : 0, any_bad = 0;
     MPI_Allreduce(&bad, &any_bad, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-    if (g_rank == 0) std::printf("\n%s\n", any_bad ? "TEST FALLITI" : "TUTTI I TEST OK");
+    if (g_rank == 0) std::printf("\n%s\n", any_bad ? "FAILES TESTS" : "ALL TEST OK");
     MPI_Finalize();
     return any_bad ? 1 : 0;
 }

@@ -13,7 +13,7 @@ static int failures = 0;
     do {                                              \
         if (!(cond)) {                                \
             ++failures;                               \
-            std::printf("  FALLITO: %s  -> ", #cond); \
+            std::printf("  FAILED: %s  -> ", #cond); \
             std::printf(__VA_ARGS__);                 \
             std::printf("\n");                        \
         }                                             \
@@ -38,9 +38,7 @@ static PointCloud make_surface(size_t n, unsigned seed) {
     for (size_t i = 0; i < n; ++i) {
         const double th = std::acos(1 - 2 * u(rng)), ph = 2 * 3.14159265358979323846 * u(rng);
         const double r = 1 + 0.25 * std::sin(3 * th) * std::cos(2 * ph) + 0.1 * std::cos(5 * ph);
-        pc.push_back(static_cast<float>(r * std::sin(th) * std::cos(ph)),
-                     static_cast<float>(0.6 * r * std::sin(th) * std::sin(ph)),
-                     static_cast<float>(0.3 * r * std::cos(th)));
+        pc.push_back(static_cast<float>(r * std::sin(th) * std::cos(ph)), static_cast<float>(0.6 * r * std::sin(th) * std::sin(ph)), static_cast<float>(0.3 * r * std::cos(th)));
     }
     return pc;
 }
@@ -54,14 +52,12 @@ static PointCloud make_source(const PointCloud& base, const Rigid& G, unsigned s
     for (size_t i = 0; i < base.size(); ++i) {
         double o[3];
         rigid_apply(Gi, base.x[i], base.y[i], base.z[i], o);
-        src.push_back(static_cast<float>(o[0] + noise(rng)), static_cast<float>(o[1] + noise(rng)),
-                      static_cast<float>(o[2] + noise(rng)));
+        src.push_back(static_cast<float>(o[0] + noise(rng)), static_cast<float>(o[1] + noise(rng)), static_cast<float>(o[2] + noise(rng)));
     }
     return src;
 }
 
-static void confronta(const char* nome, const PointCloud& src, const PointCloud& tgt, const IcpParams& prm,
-                      const CudaOptions& opt) {
+static void confronta(const char* nome, const PointCloud& src, const PointCloud& tgt, const IcpParams& prm, const CudaOptions& opt) {
     IcpResult rs = icp_seq(src, tgt, prm);
     CudaInfo ci;
     IcpResult rc = icp_cuda(src, tgt, prm, rigid_identity(), opt, &ci);
@@ -69,17 +65,15 @@ static void confronta(const char* nome, const PointCloud& src, const PointCloud&
     pose_error(rc.T, rs.T, rot, tr);
     const double drmse = std::fabs(rc.rmse.back() - rs.rmse.back());
     const long long dm = std::llabs(static_cast<long long>(rc.matches.back()) - static_cast<long long>(rs.matches.back()));
-    std::printf("  %-28s blocchi nn=%4d other=%4d | seq %.3f s, cuda %.3f s | diff: rot %.1e gradi, trasl %.1e, rmse %.1e, coppie %zu vs %zu\n",
-                nome, opt.block_nn, opt.block_other, rs.tm.total, rc.tm.total, rot, tr, drmse, rc.matches.back(),
-                rs.matches.back());
-    CHECK(rc.rmse.size() == rs.rmse.size(), "numero di iterazioni diverso: %zu vs %zu", rc.rmse.size(), rs.rmse.size());
-    CHECK(rot < 1e-3 && tr < 1e-4, "T diversa dalla sequenziale (%s)", nome);
-    CHECK(drmse < 1e-4, "RMSE diverso (%s)", nome);
-    CHECK(dm <= static_cast<long long>(rs.matches.back() / 1000 + 2), "numero di coppie diverso (%s)", nome);
+    std::printf("  %-28s blocks nn=%4d other=%4d | seq %.3f s, cuda %.3f s | diff: rot %.1e deg, trasl %.1e, rmse %.1e, pairs %zu vs %zu\n", nome, opt.block_nn, opt.block_other, rs.tm.total, rc.tm.total, rot, tr, drmse, rc.matches.back(), rs.matches.back());
+    CHECK(rc.rmse.size() == rs.rmse.size(), "Different number of iters: %zu vs %zu", rc.rmse.size(), rs.rmse.size());
+    CHECK(rot < 1e-3 && tr < 1e-4, "T different from sequential (%s)", nome);
+    CHECK(drmse < 1e-4, "Different RMSE (%s)", nome);
+    CHECK(dm <= static_cast<long long>(rs.matches.back() / 1000 + 2), "different pairs number (%s)", nome);
 }
 
 int main() {
-    std::printf("[ICP CUDA vs sequenziale]\n");
+    std::printf("[ICP CUDA vs sequential]\n");
     PointCloud tgt = make_surface(10000, 11), base = make_surface(10000, 12);
     const Rigid G = make_rigid(1, 2, 3, 6.0, 0.05, -0.03, 0.02);
     PointCloud src = make_source(base, G, 21, 0.002);
@@ -93,13 +87,13 @@ int main() {
         CudaOptions opt;
         opt.block_nn = b;
         opt.block_other = b;
-        confronta("superficie 10000 punti", src, tgt, prm, opt);
+        confronta("surface of 10000 points", src, tgt, prm, opt);
     }
 
     {   
         PointCloud t2 = make_surface(1237, 5), b2 = make_surface(1001, 6);
         PointCloud s2 = make_source(b2, G, 7, 0.002);
-        confronta("n dispari (1001 / 1237)", s2, t2, prm, CudaOptions());
+        confronta("n odd (1001 / 1237)", s2, t2, prm, CudaOptions());
     }
 
     {   
@@ -107,15 +101,15 @@ int main() {
         std::mt19937 rng(9);
         std::normal_distribution<float> g(0.2f, 0.02f);
         for (int i = 0; i < 8000; ++i) { t3.push_back(g(rng), g(rng), g(rng)); s3.push_back(g(rng), g(rng), g(rng)); }
-        confronta("con cluster denso", s3, t3, prm, CudaOptions());
+        confronta("with dense cluster", s3, t3, prm, CudaOptions());
     }
 
     {   
         IcpResult rc = icp_cuda(src, tgt, prm);
         double rot, tr;
         pose_error(rc.T, G, rot, tr);
-        std::printf("  errore vs verita': rot %.4f gradi, trasl %.5f\n", rot, tr);
-        CHECK(rot < 0.2 && tr < 0.01, "ICP CUDA non converge alla trasformazione vera");
+        std::printf("error vs GT: rot %.4f deg, trasl %.5f\n", rot, tr);
+        CHECK(rot < 0.2 && tr < 0.01, "ICP CUDA does not converge into real trasform");
     }
 
     {   
@@ -123,9 +117,8 @@ int main() {
         for (size_t i = 0; i < src.size(); ++i) far.push_back(src.x[i] + 1000.f, src.y[i], src.z[i]);
         IcpResult rs = icp_seq(far, tgt, prm);
         IcpResult rc = icp_cuda(far, tgt, prm);
-        std::printf("  nessuna coppia: seq %zu iter, cuda %zu iter, coppie %zu / %zu\n", rs.rmse.size(), rc.rmse.size(),
-                    rs.matches.back(), rc.matches.back());
-        CHECK(rc.rmse.size() == rs.rmse.size() && rc.matches.back() == 0, "caso senza coppie gestito male");
+        std::printf("no pairs: seq %zu iter, cuda %zu iter, pairs %zu / %zu\n", rs.rmse.size(), rc.rmse.size(), rs.matches.back(), rc.matches.back());
+        CHECK(rc.rmse.size() == rs.rmse.size() && rc.matches.back() == 0, "case without pairs mishandled");
     }
 
     {   
@@ -133,9 +126,9 @@ int main() {
         CudaOptions bad;
         bad.block_nn = 100;
         try { icp_cuda(src, tgt, prm, rigid_identity(), bad); } catch (const std::exception&) { thrown = true; }
-        CHECK(thrown, "block_nn=100 non rifiutato");
+        CHECK(thrown, "block_nn=100 not rejected");
     }
 
-    std::printf("\n%s (%d controlli falliti)\n", failures ? "TEST FALLITI" : "TUTTI I TEST OK", failures);
+    std::printf("\n%s (%d failed checks)\n", failures ? "FAILED TEST" : "ALL TEST OK", failures);
     return failures ? 1 : 0;
 }

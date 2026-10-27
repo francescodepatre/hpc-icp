@@ -12,7 +12,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::fprintf(stderr, "uso: %s <input> <out_prefix> [--n N] [--rot gradi] [--trans T] [--noise S] [--outliers f] [--seed s]\n", argv[0]);
+        std::fprintf(stderr, "usage: %s <input> <out_prefix> [--n N] [--rot gradi] [--trans T] [--noise S] [--outliers f] [--seed s]\n", argv[0]);
         return 1;
     }
     size_t n = 0;
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         else if (a == "--noise") noise = std::atof(v);
         else if (a == "--outliers") outl = std::atof(v);
         else if (a == "--seed") seed = static_cast<unsigned>(std::atoi(v));
-        else { std::fprintf(stderr, "opzione sconosciuta %s\n", a.c_str()); return 1; }
+        else { std::fprintf(stderr, "unknown option %s\n", a.c_str()); return 1; }
     }
 
     PointCloud in;
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     for (size_t k = 0; k < n; ++k) {
         double o[3];
         rigid_apply(Gi, in.x[idx[k]], in.y[idx[k]], in.z[idx[k]], o);
-        if (uni(rng) < outl) {  // outlier: punto casuale nel bounding box
+        if (uni(rng) < outl) {
             o[0] = mn[0] + uni(rng) * (mx[0] - mn[0]);
             o[1] = mn[1] + uni(rng) * (mx[1] - mn[1]);
             o[2] = mn[2] + uni(rng) * (mx[2] - mn[2]);
@@ -91,7 +91,6 @@ int main(int argc, char** argv) {
     gt.precision(17);
     for (int i = 0; i < 3; ++i) gt << G.R[3 * i] << " " << G.R[3 * i + 1] << " " << G.R[3 * i + 2] << " " << G.t[i] << "\n";
     gt << "0 0 0 1\n";
-    std::printf("scritti %s_source.ply, %s_target.ply (%zu punti), %s_gt.txt | diagonale %.4f, rot %.2f gradi, trasl %.4f\n",
-                pre.c_str(), pre.c_str(), n, pre.c_str(), diag, rot_deg, trans * diag);
+    std::printf("writed %s_source.ply, %s_target.ply (%zu points), %s_gt.txt | diagonal %.4f, rot %.2f deg, trasl %.4f\n", pre.c_str(), pre.c_str(), n, pre.c_str(), diag, rot_deg, trans * diag);
     return 0;
 }
